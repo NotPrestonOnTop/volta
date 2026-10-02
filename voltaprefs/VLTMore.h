@@ -1,0 +1,21 @@
+#import "VLTControllers.h"
+
+// Pages added in 2.0.
+@interface VLTHomeController : VLTBaseController
+@end
+
+@interface VLTIconsController : VLTBaseController <PHPickerViewControllerDelegate, UIDocumentPickerDelegate>
+@end
+
+@interface VLTStatusController : VLTBaseController
+@end
+
+@interface VLTNotifController : VLTBaseController
+@end
+
+// Saved setups: not a settings list, a plain table.
+@interface VLTProfilesController : UITableViewController <UIDocumentPickerDelegate>
+@end
+
+// How many profiles are saved (for the dashboard card).
+NSInteger VLTProfileCount(void);

@@ -47,6 +47,8 @@
 
 #pragma mark - State
 
+extern void VLTIslandAnnounce(NSString *text);   // Status.x
+
 static VLTState gState;          // battery settings (all processes)
 static BOOL gIsSpringBoard;
 static BOOL gRefreshing;         // YES while we replay real values through our own hooks
@@ -411,7 +413,21 @@ static void VLTRefreshBattery(void) {
 }
 
 - (void)setChargingState:(NSInteger)state {
-    if (!gRefreshing) objc_setAssociatedObject(self, kRealCharging, @(state), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    if (!gRefreshing) {
+        // Plugged in just now: the fake Dynamic Island (Status.x) says so.
+        NSNumber *before = objc_getAssociatedObject(self, kRealCharging);
+        if (before && before.integerValue != 1 && state == 1 && ((UIView *)self).window) {
+            static CFTimeInterval lastAnnounce;
+            CFTimeInterval now = CACurrentMediaTime();
+            if (now - lastAnnounce > 3) {
+                lastAnnounce = now;
+                NSNumber *real = objc_getAssociatedObject(self, kRealPercent);
+                long percent = VLTFlag1(VLTFake) ? (long)gState.fakePercent : lround((real ? real.doubleValue : self.chargePercent) * 100);
+                VLTIslandAnnounce([NSString stringWithFormat:@"⚡ %ld%%", percent]);
+            }
+        }
+        objc_setAssociatedObject(self, kRealCharging, @(state), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
     if (VLTActive()) {
         if (gState.chargeMode == 1) state = 1;
         else if (gState.chargeMode == 2) state = 0;
@@ -997,6 +1013,12 @@ static void VLTSpringBoardLoad(void) {
     VLTSyncCustomImage(prefs);
     VLTLoadCCPrefs(prefs);
     [VLTImageCache() removeAllObjects];
+    // Status bar text and the fake cutouts, for apps (written before they are told to reload).
+    [[NSFileManager defaultManager] createDirectoryAtPath:VLT_IMAGE_DIR withIntermediateDirectories:YES attributes:nil error:NULL];
+    NSDictionary *status = VLTStatusDict(prefs);
+    if (![status isEqualToDictionary:[NSDictionary dictionaryWithContentsOfFile:VLT_STATUS_PATH] ?: @{}] ||
+        ![[NSFileManager defaultManager] fileExistsAtPath:VLT_STATUS_PATH])
+        [status writeToFile:VLT_STATUS_PATH atomically:YES];
     VLTStatePublish(&gState);
     notify_post(VLT_NOTIFY_APPLY);
 }

@@ -18,7 +18,7 @@
 #define VLT_NOTIFY_PREFS    VLT_DOMAIN "/prefs"     // Settings -> SpringBoard: prefs changed
 #define VLT_NOTIFY_APPLY    VLT_DOMAIN "/apply"     // SpringBoard -> everyone: state republished
 #define VLT_NOTIFY_RESPRING VLT_DOMAIN "/respring"  // Settings -> SpringBoard
-#define VLT_VERSION         "1.9.0"   // keep in step with the "control" file
+#define VLT_VERSION         "2.0.0"   // keep in step with the "control" file
 #define VLT_STATE_VERSION   3
 
 // Custom battery picture. SpringBoard writes it here so that apps, which can
@@ -30,6 +30,11 @@
 #define VLT_IMAGE_ANIMATED    101    // the user's own frames, from the animation creator
 #define VLT_MAX_FRAMES        24
 #define VLT_FRAMES_DIR        VLT_IMAGE_DIR @"/frames"
+// Status bar settings for apps (text does not fit in the notify state).
+#define VLT_STATUS_PATH       VLT_IMAGE_DIR @"/status.plist"
+// The icon pack: one PNG per app, named <bundle id>.png
+#define VLT_ICONS_DIR         VLT_IMAGE_DIR @"/Icons"
+#define VLT_ICONS_DIR_ALT     @"/var/mobile/Library/Volta/Icons"   // used when the first is not writable
 
 // Motion added to a still battery picture (a theme or My Picture).
 enum {
@@ -483,4 +488,38 @@ static inline VLTState VLTStateRead(void) {
     memcpy(&s, words, sizeof(s));
     if (s.version != VLT_STATE_VERSION) memset(&s, 0, sizeof(s));
     return s;
+}
+
+#pragma mark - Status bar settings (written by SpringBoard, read by apps)
+
+static inline NSArray<NSString *> *VLTStatusKeys(void) {
+    return @[@"enabled",
+             @"sbClockMode", @"sbClockFormat", @"sbDateMode", @"sbDateText", @"sbCarrier",
+             @"sbHideWifi", @"sbHideCell", @"sbHideLocation", @"sbHideFocus", @"sbHideRotation",
+             @"sbHideAlarm", @"sbHideAirplane", @"sbHideVPN", @"sbHideBluetooth",
+             @"fakeCutout", @"fakeWidth", @"fakeHeight", @"fakeTop", @"fakeCharge", @"fakeLens", @"fakeHomeBar"];
+}
+
+static inline NSDictionary *VLTStatusDict(NSDictionary *prefs) {
+    NSMutableDictionary *out = [NSMutableDictionary dictionary];
+    for (NSString *key in VLTStatusKeys()) {
+        id value = prefs[key];
+        if ([value isKindOfClass:[NSString class]] || [value isKindOfClass:[NSNumber class]]) out[key] = value;
+    }
+    return out;
+}
+
+// The clock formats offered on the Status Bar page; 5 is the user's own.
+static inline NSString *VLTClockFormat(NSDictionary *settings) {
+    switch ((int)VLTNum(settings, @"sbClockMode", 0)) {
+        case 1: return @"h:mm:ss";
+        case 2: return @"HH:mm:ss";
+        case 3: return @"EEE h:mm";
+        case 4: return @"h:mm · MMM d";
+        case 5: {
+            NSString *custom = VLTStr(settings, @"sbClockFormat");
+            return custom.length ? (custom.length > 40 ? [custom substringToIndex:40] : custom) : nil;
+        }
+        default: return nil;
+    }
 }

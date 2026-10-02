@@ -116,12 +116,18 @@ static const CGFloat kBannerHeight = 130, kCardHeight = 116, kCardGap = 12;
         _banner = [[VLTHeaderView alloc] initWithFrame:CGRectZero];
         [self addSubview:_banner];
         _cards = @[
+            // Same order as VLTPage in VLTPreviews.h
             [[VLTCard alloc] initWithTitle:@"Battery" symbol:@"battery.100" from:HEX(0x4CD964) to:HEX(0x1E9E4A)],
+            [[VLTCard alloc] initWithTitle:@"Status Bar" symbol:@"wifi" from:HEX(0x64D2FF) to:HEX(0x3A7BFF)],
             [[VLTCard alloc] initWithTitle:@"Control Center" symbol:@"switch.2" from:HEX(0x5B5BF0) to:HEX(0x19C8B9)],
+            [[VLTCard alloc] initWithTitle:@"Home Screen" symbol:@"square.grid.3x3.fill" from:HEX(0x34C8A0) to:HEX(0x0E8F8A)],
+            [[VLTCard alloc] initWithTitle:@"Icons" symbol:@"app.badge.fill" from:HEX(0xFF9F0A) to:HEX(0xFF5E3A)],
             [[VLTCard alloc] initWithTitle:@"Dock" symbol:@"dock.rectangle" from:HEX(0xFFB020) to:HEX(0xFF6B2C)],
             [[VLTCard alloc] initWithTitle:@"Wallpaper" symbol:@"sparkles" from:HEX(0xBF5AF2) to:HEX(0xFF4F8B)],
             [[VLTCard alloc] initWithTitle:@"Lock Screen" symbol:@"lock.fill" from:HEX(0x40C8E0) to:HEX(0x0A84FF)],
+            [[VLTCard alloc] initWithTitle:@"Notifications" symbol:@"bell.badge.fill" from:HEX(0xFF6B6B) to:HEX(0xD9304F)],
             [[VLTCard alloc] initWithTitle:@"Fun" symbol:@"party.popper.fill" from:HEX(0xF953C6) to:HEX(0xB91D73)],
+            [[VLTCard alloc] initWithTitle:@"Profiles" symbol:@"square.stack.3d.up.fill" from:HEX(0x8E8CF5) to:HEX(0x5B4BD6)],
             [[VLTCard alloc] initWithTitle:@"About" symbol:@"heart.fill" from:HEX(0xFF6482) to:HEX(0xFF2D55)],
         ];
         NSInteger index = 0;

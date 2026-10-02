@@ -1,9 +1,15 @@
 #import <UIKit/UIKit.h>
 #import <Preferences/PSTableCell.h>
 
+// The cards on the main page, in order.
+typedef NS_ENUM(NSInteger, VLTPage) {
+    VLTPageBattery = 0, VLTPageStatus, VLTPageCC, VLTPageHome, VLTPageIcons, VLTPageDock,
+    VLTPageWallpaper, VLTPageLock, VLTPageNotif, VLTPageFun, VLTPageProfiles, VLTPageAbout,
+};
+
 // Main page: banner plus one card per section.
 @interface VLTDashboardView : UIView
-@property (nonatomic, copy) void (^onSelect)(NSInteger index);   // 0 battery, 1 control center, 2 dock, 3 wallpaper, 4 lock screen, 5 fun, 6 about
+@property (nonatomic, copy) void (^onSelect)(NSInteger index);   // a VLTPage
 - (void)setStatus:(NSString *)status atIndex:(NSInteger)index;
 - (CGFloat)heightForWidth:(CGFloat)width;
 @end

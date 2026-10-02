@@ -5,6 +5,7 @@
 #import "VLTUnzip.h"
 #import "VLTCreator.h"
 #import "VLTAbout.h"
+#import "VLTMore.h"
 #import "VLTShared.h"
 
 @interface PSListController (VLTPrivate)
@@ -172,14 +173,24 @@ static NSArray<NSString *> *VLTFunKeys(void) {
 }
 
 - (void)openPage:(NSInteger)index {
-    NSArray *pages = @[[VLTBatteryController class], [VLTCCController class], [VLTDockController class],
-                       [VLTWallpaperController class], [VLTLockController class], [VLTFunController class]];
-    if (index == (NSInteger)pages.count) {   // About is a plain page, not a settings list
+    if (index == VLTPageAbout) {   // About and Profiles are plain pages, not settings lists
         [self.navigationController pushViewController:[[VLTAboutController alloc] init] animated:YES];
         return;
     }
-    if (index < 0 || index >= (NSInteger)pages.count) return;
-    PSListController *page = [[pages[index] alloc] init];
+    if (index == VLTPageProfiles) {
+        [self.navigationController pushViewController:[[VLTProfilesController alloc] init] animated:YES];
+        return;
+    }
+    NSDictionary<NSNumber *, Class> *pages = @{
+        @(VLTPageBattery): [VLTBatteryController class], @(VLTPageStatus): [VLTStatusController class],
+        @(VLTPageCC): [VLTCCController class], @(VLTPageHome): [VLTHomeController class],
+        @(VLTPageIcons): [VLTIconsController class], @(VLTPageDock): [VLTDockController class],
+        @(VLTPageWallpaper): [VLTWallpaperController class], @(VLTPageLock): [VLTLockController class],
+        @(VLTPageNotif): [VLTNotifController class], @(VLTPageFun): [VLTFunController class],
+    };
+    Class pageClass = pages[@(index)];
+    if (!pageClass) return;
+    PSListController *page = [[pageClass alloc] init];
     page.rootController = self.rootController;
     page.parentController = self;
     if ([self respondsToSelector:@selector(showController:animate:)]) [self showController:page animate:YES];
@@ -198,27 +209,40 @@ static NSArray<NSString *> *VLTFunKeys(void) {
     else if (picture >= 1 && picture <= VLT_THEME_COUNT) battery = [NSString stringWithUTF8String:kVLTThemes[picture - 1].name];
     else if (VLTBool(p, @"batColors", NO)) battery = @"Custom colors";
     else if (VLTBool(p, @"batFakeEnabled", NO)) battery = @"Fake percentage";
-    [_dashboard setStatus:on ? battery : off atIndex:0];
+    [_dashboard setStatus:on ? battery : off atIndex:VLTPageBattery];
 
-    [_dashboard setStatus:(on && VLTBool(p, @"ccEnabled", YES)) ? @"On" : off atIndex:1];
-    [_dashboard setStatus:(on && VLTBool(p, @"dockEnabled", YES)) ? @"On" : off atIndex:2];
-    [_dashboard setStatus:on ? [VLTSceneView nameForKind:(NSInteger)VLTNum(p, @"wallKind", 0)] : off atIndex:3];
+    [_dashboard setStatus:(on && VLTBool(p, @"ccEnabled", YES)) ? @"On" : off atIndex:VLTPageCC];
+    [_dashboard setStatus:(on && VLTBool(p, @"dockEnabled", YES)) ? @"On" : off atIndex:VLTPageDock];
+    [_dashboard setStatus:on ? [VLTSceneView nameForKind:(NSInteger)VLTNum(p, @"wallKind", 0)] : off atIndex:VLTPageWallpaper];
     NSInteger style = (NSInteger)VLTNum(p, @"slideStyle", 0);
     NSString *gesture = style == 1 ? @"Swipe up to unlock" : (style == 2 ? @"Slider + swipe up" : @"Slide to unlock");
-    [_dashboard setStatus:(on && VLTBool(p, @"slideOn", NO)) ? gesture : off atIndex:4];
+    NSString *lock = (on && VLTBool(p, @"slideOn", NO)) ? gesture : ((on && VLTBool(p, @"lockLookOn", NO)) ? @"Custom clock" : off);
+    [_dashboard setStatus:lock atIndex:VLTPageLock];
+
+    // Status bar: the fake cutout wins the summary, then the clock.
+    NSInteger cutout = (NSInteger)VLTNum(p, @"fakeCutout", 0);
+    NSString *status = cutout == 1 ? @"Fake notch" : (cutout == 2 ? @"Fake Dynamic Island" : (VLTClockFormat(p) ? @"Custom clock" : @"Standard"));
+    [_dashboard setStatus:on ? status : off atIndex:VLTPageStatus];
+    [_dashboard setStatus:(on && VLTBool(p, @"homeOn", NO)) ? @"On" : off atIndex:VLTPageHome];
+    NSArray *shapes = @[@"Themed", @"Circle", @"Hexagon", @"Octagon", @"Leaf", @"Star", @"Heart", @"Diamond"];
+    NSInteger shape = (NSInteger)VLTNum(p, @"iconShape", 0);
+    [_dashboard setStatus:(on && VLTBool(p, @"iconOn", NO)) ? shapes[(shape >= 0 && shape < (NSInteger)shapes.count) ? shape : 0] : off atIndex:VLTPageIcons];
+    [_dashboard setStatus:(on && VLTBool(p, @"notifOn", NO)) ? @"On" : off atIndex:VLTPageNotif];
+    NSInteger profiles = VLTProfileCount();
+    [_dashboard setStatus:profiles ? [NSString stringWithFormat:@"%ld saved", (long)profiles] : @"None saved" atIndex:VLTPageProfiles];
     NSInteger funCount = 0;
     for (NSString *key in VLTFunKeys()) funCount += VLTBool(p, key, NO) ? 1 : 0;
     if ((NSInteger)VLTNum(p, @"funAngle", 0) > 0) funCount++;
     if ((NSInteger)VLTNum(p, @"funNames", 0) > 0) funCount++;
-    [_dashboard setStatus:(on && funCount) ? [NSString stringWithFormat:@"%ld on", (long)funCount] : off atIndex:5];
-    [_dashboard setStatus:[VLTUpdater updateAvailable] ? @"Update available" : [@"Version " stringByAppendingString:@VLT_VERSION] atIndex:6];
+    [_dashboard setStatus:(on && funCount) ? [NSString stringWithFormat:@"%ld on", (long)funCount] : off atIndex:VLTPageFun];
+    [_dashboard setStatus:[VLTUpdater updateAvailable] ? @"Update available" : [@"Version " stringByAppendingString:@VLT_VERSION] atIndex:VLTPageAbout];
 
     // Once a day, quietly look for a newer version (only if a link is set).
     __weak typeof(self) weakSelf = self;
     [VLTUpdater checkIfDueWithCompletion:^{
         typeof(self) strongSelf = weakSelf;
         if (!strongSelf) return;
-        [strongSelf->_dashboard setStatus:[VLTUpdater updateAvailable] ? @"Update available" : [@"Version " stringByAppendingString:@VLT_VERSION] atIndex:6];
+        [strongSelf->_dashboard setStatus:[VLTUpdater updateAvailable] ? @"Update available" : [@"Version " stringByAppendingString:@VLT_VERSION] atIndex:VLTPageAbout];
     }];
 }
 

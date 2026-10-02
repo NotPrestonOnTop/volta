@@ -7,15 +7,15 @@ INSTALL_TARGET_PROCESSES = SpringBoard
 
 include $(THEOS)/makefiles/common.mk
 
-# Volta     -> every app: status bar battery (plus Control Center in SpringBoard)
-# VoltaHome -> SpringBoard only: dock and animated wallpapers
+# Volta     -> every app: status bar battery, clock text, hidden items, fake notch (plus Control Center in SpringBoard)
+# VoltaHome -> SpringBoard only: Home Screen, icons, dock, wallpapers, Lock Screen, notifications, fun
 TWEAK_NAME = Volta VoltaHome
 
-Volta_FILES = Tweak.x
+Volta_FILES = Tweak.x Status.x
 Volta_CFLAGS = -fobjc-arc
 Volta_FRAMEWORKS = UIKit QuartzCore
 
-VoltaHome_FILES = Home.x Layout.x Lock.x Fun.x VLTScene.m VLTSlider.m
+VoltaHome_FILES = Home.x Layout.x Lock.x LockLook.x Icons.x Notify.x Fun.x VLTScene.m VLTSlider.m
 VoltaHome_CFLAGS = -fobjc-arc
 VoltaHome_FRAMEWORKS = UIKit QuartzCore AVFoundation CoreMedia CoreMotion AudioToolbox
 
