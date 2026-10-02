@@ -1,0 +1,9 @@
+#!/bin/sh
+# Take the Phone and Calculator icons off the Home Screen when Volta is removed.
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    if command -v uicache >/dev/null 2>&1; then
+        uicache -u /var/jb/Applications/VoltaPhone.app 2>/dev/null
+        uicache -u /var/jb/Applications/VoltaCalc.app 2>/dev/null
+    fi
+fi
+exit 0
