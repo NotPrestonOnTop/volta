@@ -1,0 +1,13 @@
+#!/bin/sh
+# SpringBoard (user "mobile") stores the custom battery picture here so that
+# apps can read it. Make the folder writable for it.
+DIR="/var/jb/Library/Application Support/Volta"
+mkdir -p "$DIR"
+chown mobile:mobile "$DIR" 2>/dev/null || chown 501:501 "$DIR" 2>/dev/null
+chmod 755 "$DIR"
+# Put the Phone and Calculator apps on the Home Screen.
+if command -v uicache >/dev/null 2>&1; then
+    uicache -p /var/jb/Applications/VoltaPhone.app 2>/dev/null
+    uicache -p /var/jb/Applications/VoltaCalc.app 2>/dev/null
+fi
+exit 0
