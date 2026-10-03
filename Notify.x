@@ -54,6 +54,7 @@ static void VLTApplyNotif(UIView *host) {
     // Corner radius (the real one is remembered so it can be put back).
     CGFloat radius = VLTLookRadius(background);
     if (gNotifOn && gRadiusOn) {
+        if (background.bounds.size.width < 2) return;   // not laid out yet; its real radius is not known
         if (!realRadius) objc_setAssociatedObject(host, kNotifRealRadius, @(radius), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         CGFloat wanted = MIN(gRadius, MIN(background.bounds.size.width, background.bounds.size.height) / 2);
         if (fabs(radius - wanted) > 0.01) VLTLookSetRadius(background, wanted);

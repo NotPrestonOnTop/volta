@@ -91,11 +91,13 @@ static BOOL VLTIsHomeIcon(UIView *iconView) {
 }
 
 static void VLTApplyIconLayout(UIView *iconView) {
-    BOOL home = VLTIsHomeIcon(iconView);
-    VLTPinOffset(iconView.layer, @"vltIconSize", @"transform.scale", gHomeOn && home, gIconScale - 1);
+    BOOL wanted = gHomeOn && fabs(gIconScale - 1) > 0.0005 && VLTIsHomeIcon(iconView);
+    VLTPinOffset(iconView.layer, @"vltIconSize", @"transform.scale", wanted, gIconScale - 1);
 }
 
 static const void *kDotsMask = &kDotsMask;
+static const void *kRealLabelAlpha = &kRealLabelAlpha;
+static BOOL gReplayingLabel;
 
 static void VLTRefreshIconLayout(void) {
     static BOOL lastHideLabels;
@@ -103,15 +105,19 @@ static void VLTRefreshIconLayout(void) {
     lastHideLabels = gHideLabels;
     for (SBIconView *iconView in VLTIconViews().allObjects) {
         VLTApplyIconLayout(iconView);
-        if (labelsChanged && VLTIsHomeIcon(iconView) && [iconView respondsToSelector:@selector(setIconLabelAlpha:)])
-            [iconView setIconLabelAlpha:1];   // goes through the hook below, which turns it into 0 while hiding
+        if (labelsChanged && VLTIsHomeIcon(iconView) && [iconView respondsToSelector:@selector(setIconLabelAlpha:)]) {
+            NSNumber *real = objc_getAssociatedObject(iconView, kRealLabelAlpha);
+            gReplayingLabel = YES;
+            [iconView setIconLabelAlpha:real ? real.doubleValue : 1];   // the hook below turns it into 0 while hiding
+            gReplayingLabel = NO;
+        }
     }
     for (UIView *dots in VLTPageDots().allObjects) VLTSetMasked(dots, gHideDots, kDotsMask);
 }
 
 #pragma mark - Theme
 
-static const void *kThemed = &kThemed;        // on the system's image: @[generation, themed image or NSNull]
+static const void *kThemed = &kThemed;        // on the system's image: @[generation, bundle id, themed image or NSNull]
 static const void *kThemedMark = &kThemedMark; // on images we made, so they are never themed twice
 
 static UIImage *VLTPackArtwork(NSString *bundleID) {
@@ -139,20 +145,23 @@ static UIImage *VLTThemedImage(UIView *imageView, UIImage *image) {
     if (objc_getAssociatedObject(image, kThemedMark)) return nil;
     if (!gPackOn && VLTIconStyleIsPlain(gStyle)) return nil;
 
+    // Several apps can share one picture (the placeholder shown while icons load),
+    // so the cached result also remembers which app it was made for.
+    SBIcon *icon = [imageView respondsToSelector:@selector(icon)] ? [(SBIconImageView *)imageView icon] : nil;
+    NSString *owner = [icon respondsToSelector:@selector(applicationBundleID)] ? [icon applicationBundleID] : nil;
+    if (![owner isKindOfClass:[NSString class]]) owner = @"";
     NSArray *entry = objc_getAssociatedObject(image, kThemed);
-    if (entry.count == 2 && [entry[0] integerValue] == gThemeGen) return entry[1] == [NSNull null] ? nil : entry[1];
+    if (entry.count == 3 && [entry[0] integerValue] == gThemeGen && [entry[1] isEqual:owner]) return entry[2] == [NSNull null] ? nil : entry[2];
 
     UIImage *themed = nil;
-    SBIcon *icon = [imageView respondsToSelector:@selector(icon)] ? [(SBIconImageView *)imageView icon] : nil;
     BOOL folder = [icon respondsToSelector:@selector(isFolderIcon)] && [icon isFolderIcon];
     BOOL widget = [icon respondsToSelector:@selector(isWidgetIcon)] && [icon isWidgetIcon];
     if (icon && !folder && !widget) {
-        NSString *bundleID = [icon respondsToSelector:@selector(applicationBundleID)] ? [icon applicationBundleID] : nil;
-        UIImage *artwork = [bundleID isKindOfClass:[NSString class]] ? VLTPackArtwork(bundleID) : nil;
+        UIImage *artwork = owner.length ? VLTPackArtwork(owner) : nil;
         themed = VLTIconRender(image, artwork, gStyle);
         if (themed) objc_setAssociatedObject(themed, kThemedMark, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
-    objc_setAssociatedObject(image, kThemed, @[@(gThemeGen), themed ?: (id)[NSNull null]], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(image, kThemed, @[@(gThemeGen), owner, themed ?: (id)[NSNull null]], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     return themed;
 }
 
@@ -173,7 +182,11 @@ static void VLTRefreshTheme(void) {
     if (!((UIView *)self).window) return;
     [VLTIconViews() addObject:self];
     VLTApplyIconLayout((UIView *)self);
-    if (gHideLabels && VLTIsHomeIcon((UIView *)self) && [self respondsToSelector:@selector(setIconLabelAlpha:)]) [self setIconLabelAlpha:0];
+    if (gHideLabels && VLTIsHomeIcon((UIView *)self) && [self respondsToSelector:@selector(setIconLabelAlpha:)]) {
+        gReplayingLabel = YES;
+        [self setIconLabelAlpha:0];
+        gReplayingLabel = NO;
+    }
 }
 
 - (void)layoutSubviews {
@@ -181,13 +194,24 @@ static void VLTRefreshTheme(void) {
     VLTApplyIconLayout((UIView *)self);
 }
 
+// The system clears an icon's animations now and then; our size rides on one.
+- (void)removeAllIconAnimations {
+    %orig;
+    VLTApplyIconLayout((UIView *)self);
+}
+
 - (void)setLocation:(NSString *)location {
     %orig;
     VLTApplyIconLayout((UIView *)self);
-    if (gHideLabels && VLTIsHomeIcon((UIView *)self) && [self respondsToSelector:@selector(setIconLabelAlpha:)]) [self setIconLabelAlpha:0];
+    if (gHideLabels && VLTIsHomeIcon((UIView *)self) && [self respondsToSelector:@selector(setIconLabelAlpha:)]) {
+        gReplayingLabel = YES;
+        [self setIconLabelAlpha:0];
+        gReplayingLabel = NO;
+    }
 }
 
 - (void)setIconLabelAlpha:(CGFloat)alpha {
+    if (!gReplayingLabel) objc_setAssociatedObject(self, kRealLabelAlpha, @(alpha), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     if (gHideLabels && VLTIsHomeIcon((UIView *)self)) alpha = 0;
     %orig(alpha);
 }

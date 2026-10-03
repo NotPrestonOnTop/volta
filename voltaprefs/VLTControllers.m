@@ -84,7 +84,13 @@ static NSArray<NSString *> *VLTFunKeys(void) {
     NSString *key = [specifier propertyForKey:@"key"];
     if (!key) return nil;
     id value = CFBridgingRelease(CFPreferencesCopyAppValue((__bridge CFStringRef)key, CFSTR(VLT_DOMAIN)));
-    return value ?: [specifier propertyForKey:@"default"];
+    id fallback = [specifier propertyForKey:@"default"];
+    // Rows only ever store numbers and text. Anything else (say, from an imported
+    // profile that was edited by hand) is ignored rather than handed to a switch.
+    BOOL number = [value isKindOfClass:[NSNumber class]], text = [value isKindOfClass:[NSString class]];
+    if (value && !number && !text) value = nil;
+    if (value && fallback && ((number && [fallback isKindOfClass:[NSString class]]) || (text && [fallback isKindOfClass:[NSNumber class]]))) value = nil;
+    return value ?: fallback;
 }
 
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {

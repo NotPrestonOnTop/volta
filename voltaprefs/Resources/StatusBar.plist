@@ -148,7 +148,7 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>An item appears or disappears the next time the status bar refreshes it; a respring updates everything at once.</string>
+			<string>An item appears or disappears the next time the status bar refreshes it. If one is slow to catch up, close and reopen the app, or respring for the Home Screen.</string>
 			<key>label</key>
 			<string>Hide Items</string>
 		</dict>

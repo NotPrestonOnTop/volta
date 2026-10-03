@@ -448,6 +448,7 @@ static NSArray<NSString *> *VLTSymbolChoices(void) {
         if (byIdentifier[identifier] && ![_modules containsObject:byIdentifier[identifier]]) [_modules addObject:byIdentifier[identifier]];
     }
     for (NSDictionary *module in info) {             // then anything new, in system order
+        if (![module isKindOfClass:[NSDictionary class]] || ![module[@"id"] isKindOfClass:[NSString class]]) continue;
         if (byIdentifier[module[@"id"]] && ![_modules containsObject:module]) [_modules addObject:module];
     }
     _hidden = [NSMutableSet setWithArray:hidden];

@@ -6,6 +6,7 @@
 #import "VLTShared.h"
 #import "VLTIconTheme.h"
 #import <notify.h>
+#import <ImageIO/ImageIO.h>
 
 @interface PSListController (VLTMorePrivate)
 - (id)cachedCellForSpecifier:(PSSpecifier *)specifier;
@@ -22,10 +23,23 @@ static void VLTMoreCommit(void) {
     notify_post(VLT_NOTIFY_PREFS);
 }
 
-static void VLTMoreAlert(UIViewController *host, NSString *title, NSString *message) {
+static void VLTMoreAlertNow(UIViewController *host, NSString *title, NSString *message, int triesLeft) {
+    if (!host.viewIfLoaded.window) return;
+    // A picker may still be sliding away; an alert shown on top of it is dropped.
+    if (host.presentedViewController && triesLeft > 0) {
+        __weak UIViewController *weakHost = host;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.45 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            if (weakHost) VLTMoreAlertNow(weakHost, title, message, triesLeft - 1);
+        });
+        return;
+    }
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
     [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil]];
     [host presentViewController:alert animated:YES completion:nil];
+}
+
+static void VLTMoreAlert(UIViewController *host, NSString *title, NSString *message) {
+    VLTMoreAlertNow(host, title, message, 4);
 }
 
 #pragma mark - Preview card
@@ -245,7 +259,7 @@ static UIImage *VLTSampleIcon(NSString *symbol, UIColor *top, UIColor *bottom, C
     CGRect card = VLTMoreCard(self);
     CGFloat width = MIN(card.size.width - 36, 360), height = 68;
     CGRect banner = CGRectMake(CGRectGetMidX(card) - width / 2, CGRectGetMidY(card) - height / 2 + 9, width, height);
-    CGFloat radius = (on && VLTBool(p, @"notifRadiusOn", NO)) ? MIN(VLTNum(p, @"notifRadius", 20), height / 2) : 20;
+    CGFloat radius = (on && VLTBool(p, @"notifRadiusOn", NO)) ? fmin(fmax(VLTNum(p, @"notifRadius", 20), 0), height / 2) : 20;
     UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:banner cornerRadius:radius];
 
     if (!(on && VLTBool(p, @"notifHideBlur", NO))) {
@@ -253,13 +267,13 @@ static UIImage *VLTSampleIcon(NSString *symbol, UIColor *top, UIColor *bottom, C
         [path fill];
     }
     UIColor *tint = on ? VLTColorFromHex(p[@"notifTint"]) : nil;
-    CGFloat strength = VLTNum(p, @"notifTintStrength", 50) / 100.0;
+    CGFloat strength = fmin(fmax(VLTNum(p, @"notifTintStrength", 50) / 100.0, 0), 1);
     if (tint && strength > 0.001) {
         [[tint colorWithAlphaComponent:strength * CGColorGetAlpha(tint.CGColor)] setFill];
         [path fill];
     }
     UIColor *border = on ? VLTColorFromHex(p[@"notifBorder"]) : nil;
-    CGFloat borderWidth = on ? VLTNum(p, @"notifBorderWidth", 0) : 0;
+    CGFloat borderWidth = on ? fmin(fmax(VLTNum(p, @"notifBorderWidth", 0), 0), 6) : 0;
     if (border && borderWidth > 0.01) {
         UIBezierPath *stroke = [UIBezierPath bezierPathWithRoundedRect:CGRectInset(banner, borderWidth / 2, borderWidth / 2)
                                                           cornerRadius:MAX(0, radius - borderWidth / 2)];
@@ -381,6 +395,29 @@ static NSString *VLTBundleIDFromFileName(NSString *fileName) {
     return VLTLooksLikeBundleID(name) ? name : nil;
 }
 
+// Loads a picture file at no more than 512 pixels a side, however large the
+// file claims to be, so a tiny file cannot ask for a huge amount of memory.
+static UIImage *VLTLoadSmallImage(NSString *path) {
+    CGImageSourceRef source = CGImageSourceCreateWithURL((__bridge CFURLRef)[NSURL fileURLWithPath:path], NULL);
+    if (!source) return nil;
+    UIImage *image = nil;
+    NSDictionary *properties = CFBridgingRelease(CGImageSourceCopyPropertiesAtIndex(source, 0, NULL));
+    double width = [properties[(__bridge NSString *)kCGImagePropertyPixelWidth] doubleValue];
+    double height = [properties[(__bridge NSString *)kCGImagePropertyPixelHeight] doubleValue];
+    if (width >= 8 && height >= 8 && width <= 8192 && height <= 8192) {
+        NSDictionary *options = @{(__bridge NSString *)kCGImageSourceCreateThumbnailFromImageAlways: @YES,
+                                  (__bridge NSString *)kCGImageSourceThumbnailMaxPixelSize: @512,
+                                  (__bridge NSString *)kCGImageSourceCreateThumbnailWithTransform: @YES};
+        CGImageRef small = CGImageSourceCreateThumbnailAtIndex(source, 0, (__bridge CFDictionaryRef)options);
+        if (small) {
+            image = [UIImage imageWithCGImage:small scale:1 orientation:UIImageOrientationUp];
+            CGImageRelease(small);
+        }
+    }
+    CFRelease(source);
+    return image;
+}
+
 // Every stored icon is a plain 180 x 180 PNG, whatever came in.
 static BOOL VLTStorePackIcon(UIImage *image, NSString *bundleID, NSString *folder) {
     if (!image || image.size.width < 8 || image.size.height < 8 || !VLTLooksLikeBundleID(bundleID)) return NO;
@@ -487,9 +524,12 @@ static void VLTPackChanged(NSString *folder) {
     void (^onPick)(NSString *, NSString *) = self.onPick;
     // The search field may be presenting on top of us; close everything first.
     self.navigationItem.searchController.active = NO;
-    [self.presentingViewController dismissViewControllerAnimated:YES completion:^{
-        if (onPick) onPick(app[@"id"], app[@"name"]);
-    }];
+    UIViewController *presenter = self.presentingViewController;
+    dispatch_async(dispatch_get_main_queue(), ^{   // let the search field finish closing
+        [presenter dismissViewControllerAnimated:YES completion:^{
+            if (onPick) onPick(app[@"id"], app[@"name"]);
+        }];
+    });
 }
 
 @end
@@ -522,8 +562,11 @@ static void VLTPackChanged(NSString *folder) {
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
     NSURL *url = urls.firstObject;
     if (!url) return;
-    UIAlertController *busy = [UIAlertController alertControllerWithTitle:@"Importing…" message:nil preferredStyle:UIAlertControllerStyleAlert];
-    [self presentViewController:busy animated:YES completion:nil];
+    // Progress is a spinner in the navigation bar: nothing that has to be presented and dismissed in step with the picker.
+    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
+    [spinner startAnimating];
+    UIBarButtonItem *previousItem = self.navigationItem.rightBarButtonItem;
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:spinner];
     __weak typeof(self) weakSelf = self;
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSFileManager *files = [NSFileManager defaultManager];
@@ -562,7 +605,7 @@ static void VLTPackChanged(NSString *folder) {
             for (NSString *bundleID in best) {
                 if (stored >= 1000) break;
                 @autoreleasepool {
-                    UIImage *image = [UIImage imageWithContentsOfFile:best[bundleID]];
+                    UIImage *image = VLTLoadSmallImage(best[bundleID]);
                     if (VLTStorePackIcon(image, bundleID, folder)) stored++;
                 }
             }
@@ -573,13 +616,12 @@ static void VLTPackChanged(NSString *folder) {
         dispatch_async(dispatch_get_main_queue(), ^{
             typeof(self) strongSelf = weakSelf;
             if (stored > 0) VLTPackChanged(folder);
-            [busy dismissViewControllerAnimated:YES completion:^{
-                if (!strongSelf) return;
-                [strongSelf prefsDidChange];
-                if (problem) VLTMoreAlert(strongSelf, @"Couldn't Import", problem);
-                else VLTMoreAlert(strongSelf, @"Icon Pack Imported",
-                                  [NSString stringWithFormat:@"%ld icon%@ added. Turn on Theme Icons and Use Icon Pack to see them.", (long)stored, stored == 1 ? @"" : @"s"]);
-            }];
+            if (!strongSelf) return;
+            strongSelf.navigationItem.rightBarButtonItem = previousItem;
+            [strongSelf prefsDidChange];
+            if (problem) VLTMoreAlert(strongSelf, @"Couldn't Import", problem);
+            else VLTMoreAlert(strongSelf, @"Icon Pack Imported",
+                              [NSString stringWithFormat:@"%ld icon%@ added. Turn on Theme Icons and Use Icon Pack to see them.", (long)stored, stored == 1 ? @"" : @"s"]);
         });
     });
 }
@@ -658,9 +700,11 @@ static void VLTPackChanged(NSString *folder) {
 #define VLT_MAX_PROFILES 16
 #define VLT_PROFILE_MAX_BYTES (24 * 1024 * 1024)
 
-// Not part of a look: the update checker's bookkeeping and which apps are shown.
+// Not part of a look: the update checker's bookkeeping, which apps are shown,
+// and things only true of this device.
 static BOOL VLTProfileSkipsKey(NSString *key) {
-    return [key hasPrefix:@"update"] || [key isEqualToString:@"appPhone"] || [key isEqualToString:@"appCalc"];
+    return [key hasPrefix:@"update"] || [key isEqualToString:@"appPhone"] || [key isEqualToString:@"appCalc"] ||
+           [key isEqualToString:@"iconDir"] || [key isEqualToString:@"ccModuleInfo"];   // facts about this device
 }
 
 // Settings that point at files on this device; they mean nothing elsewhere.
@@ -668,8 +712,12 @@ static BOOL VLTProfileKeyIsLocal(NSString *key) {
     return [key hasSuffix:@"Path"] || [key hasSuffix:@"Dir"];
 }
 
+// A small file can describe a huge tree (containers may be shared), so the
+// whole check is limited to a fixed number of values.
+static NSInteger gProfileBudget;
+
 static BOOL VLTProfileValueOK(id value, int depth) {
-    if (depth > 4) return NO;
+    if (depth > 4 || --gProfileBudget < 0) return NO;
     if ([value isKindOfClass:[NSString class]]) return [value length] < 4096;
     if ([value isKindOfClass:[NSNumber class]] || [value isKindOfClass:[NSDate class]]) return YES;
     if ([value isKindOfClass:[NSData class]]) return [value length] < 8 * 1024 * 1024;
@@ -701,6 +749,7 @@ static BOOL VLTProfileKeyOK(NSString *key) {
 // The current settings, as a profile's "prefs".
 static NSDictionary *VLTProfileSnapshot(void) {
     NSMutableDictionary *prefs = [NSMutableDictionary dictionary];
+    gProfileBudget = 20000;
     [VLTCopyPrefs() enumerateKeysAndObjectsUsingBlock:^(NSString *key, id value, BOOL *stop) {
         if (VLTProfileKeyOK(key) && !VLTProfileSkipsKey(key) && VLTProfileValueOK(value, 0)) prefs[key] = value;
     }];
@@ -732,6 +781,7 @@ static void VLTProfileApply(NSDictionary *profile) {
     for (NSString *key in current.allKeys) {
         if (!VLTProfileSkipsKey(key)) VLTMoreSet(key, nil);
     }
+    gProfileBudget = 20000;
     [wanted enumerateKeysAndObjectsUsingBlock:^(NSString *key, id value, BOOL *stop) {
         if (VLTProfileKeyOK(key) && !VLTProfileSkipsKey(key) && VLTProfileValueOK(value, 0)) VLTMoreSet(key, value);
     }];
@@ -940,6 +990,7 @@ static void VLTProfileApply(NSDictionary *profile) {
         return;
     }
     NSMutableDictionary *prefs = [NSMutableDictionary dictionary];
+    gProfileBudget = 20000;
     [incoming enumerateKeysAndObjectsUsingBlock:^(id key, id value, BOOL *stop) {
         if (VLTProfileKeyOK(key) && !VLTProfileKeyIsLocal(key) && !VLTProfileSkipsKey(key) && VLTProfileValueOK(value, 0)) prefs[key] = value;
     }];

@@ -102,15 +102,16 @@ static void VLTApplyClock(SBFLockScreenDateView *view) {
     VLTPinOffset(layer, @"vltClockX", @"transform.translation.x", gLookOn, gClockX);
     VLTPinOffset(layer, @"vltClockY", @"transform.translation.y", gLookOn, gClockY);
 
-    // Typeface. The label keeps whatever font it was given, so set it when it differs.
-    // Compared with the last font we set (not the label's own getter), so layout can never chase itself.
-    UIFont *lastSet = objc_getAssociatedObject(view, kLookTouched);
+    // Typeface. The label keeps whatever font it was given, so set it when the choice changes.
+    // Compared as a plain stamp of what we last set, so layout can never chase itself.
+    NSString *lastSet = objc_getAssociatedObject(view, kLookTouched);
     if ((gFont != 0 || lastSet) && [view respondsToSelector:@selector(_timeLabel)] && [[view class] respondsToSelector:@selector(timeFont)]) {
         id label = [view _timeLabel];
         UIFont *wanted = [[view class] timeFont];   // goes through the hook below
-        if ([label respondsToSelector:@selector(setFont:)] && [wanted isKindOfClass:[UIFont class]] && ![lastSet isEqual:wanted]) {
+        NSString *stamp = [wanted isKindOfClass:[UIFont class]] ? [NSString stringWithFormat:@"%ld-%.1f", (long)gFont, wanted.pointSize] : nil;
+        if (stamp && [label respondsToSelector:@selector(setFont:)] && ![lastSet isEqualToString:stamp]) {
             [label setFont:wanted];
-            objc_setAssociatedObject(view, kLookTouched, wanted, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            objc_setAssociatedObject(view, kLookTouched, stamp, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             [view setNeedsLayout];
         }
     }

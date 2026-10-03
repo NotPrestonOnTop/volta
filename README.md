@@ -1,6 +1,6 @@
 # Volta
 
-Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta** pane to Settings with a card dashboard and four pages, each with a live preview:
+Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta** pane to Settings with a card dashboard of twelve pages, most with a live preview:
 
 **Battery** (status bar, in every app)
 - Animated pictures: add Pulse, Bounce, Wobble, Spin, Blink or Shake to any still picture, or build your own in the Animation Creator (draw 16 × 16 pixel frames, add photos, or import a GIF; up to 24 frames), with named save slots
@@ -11,6 +11,27 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 - Force the charging bolt or the yellow Low Power look on or off
 - Custom fill, outline, tip, bolt and text colors, or color by charge level
 - Live preview at the top of the page
+
+**Status Bar** (in every app)
+- Clock: seconds, 24-hour, weekday, date, or your own format
+- Date (iPad): replace it with any text, or hide it; custom carrier name on cellular devices
+- Hide single items: Wi-Fi, cellular, location, Focus, rotation lock, alarm, airplane mode, VPN, headphones
+- Fake hardware: an iPhone-style notch or Dynamic Island at the top of the screen (the island stretches to show the charge when you plug in), and a fake home bar. Pictures only; touches pass through
+
+**Home Screen**
+- Icon size, hide app names, hide page dots
+- Custom rows and columns per orientation (experimental, needs a respring)
+
+**Icons**
+- Shapes: circle, hexagon, octagon, leaf, star, heart, diamond
+- Tints: colorize, wash, grayscale, invert, with a strength slider
+- Icon packs: import a .zip of PNGs named by bundle id, or give one app a picture from Photos
+
+**Notifications**
+- Tint color and strength, corner radius, border, remove the blur
+
+**Profiles**
+- Save every Volta setting as a named profile, switch in one tap, share a profile as a `.voltaprofile` file and import one
 
 **Control Center**
 - Background blur amount, background tint color and strength
@@ -43,6 +64,7 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 - One-tap style presets: Glass, Neon, Midnight, Sunset
 
 **Lock Screen**
+- Clock: typeface (rounded, serif, monospaced, heavy, ultra light), color, size and position; a message under the clock; hide the date, the "Press Home" text, page dots, and the flashlight / camera buttons and padlock on Face ID devices
 - Unlock gesture: a classic slide-to-unlock slider (your own text and knob color), swipe up from the bottom edge, or both; it requests a normal unlock, so a passcode is still asked for
 
 **Dock** (iPhone dock and iPad floating dock)
@@ -61,7 +83,7 @@ Everything is visual only. The real battery level and system behaviour are untou
 
 ## Install
 
-Download [`com.notpreston.volta_1.9.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_1.9.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
+Download [`com.notpreston.volta_2.0.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.0.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
 For rootless jailbreaks (Dopamine, palera1n rootless) on iOS 15 – 17.
 Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader.
 
@@ -73,6 +95,12 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
 ## Layout
 
     Tweak.x              hooks: battery (all apps) and Control Center (SpringBoard)
+    Status.x             hooks: status bar text, hidden items, fake notch / Dynamic Island / home bar (all apps)
+    Icons.x              hooks: Home Screen layout and icon themes (SpringBoard only)
+    LockLook.x           hooks: Lock Screen clock, message and hidden bits (SpringBoard only)
+    Notify.x             hooks: notification styling (SpringBoard only)
+    VLTIconTheme.h       icon shapes and tints; shared with the Settings preview
+    VLTLook.h            small helpers shared by the look-and-feel hooks
     Home.x               hooks: dock and animated wallpaper (SpringBoard only, separate library)
     Lock.x               hooks: Lock Screen unlock gestures (SpringBoard only)
     VLTSlider.m          the slide-to-unlock and swipe-up controls; shared with the Settings preview
@@ -87,6 +115,7 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     voltacalc/           the Calculator app; CalcCore.h is its arithmetic, testable on its own
     voltaprefs/          Settings pane
       VLTControllers.m   the pages, color picker, respring, reset
+      VLTMore.m          Home Screen, Icons, Status Bar and Notifications pages; icon pack import; profiles
       VLTViews.m         header banner, battery preview, color row
       VLTUnzip.c         zip extractor for .tendies files (plain C, zlib)
       VLTCreator.m       animation creator and pixel editor
@@ -116,7 +145,7 @@ This repository hosts one; paste this link into About > Update link:
 For a new version: add the new .deb to `releases/`, then change `version`, `notes` and `url` in
 [`updates.json`](updates.json). The file looks like this:
 
-    { "version": "1.9.0", "notes": "What changed", "url": "https://where-to-download" }
+    { "version": "2.0.0", "notes": "What changed", "url": "https://where-to-download" }
 
 Volta checks it once a day and compares `version` with its own. When you release a new
 build, bump `Version` in `control` and `VLT_VERSION` in `VLTShared.h`, then update the file.

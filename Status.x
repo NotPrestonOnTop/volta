@@ -102,7 +102,10 @@ static NSString *VLTClockString(void) {
     static NSDateFormatter *formatter;
     static NSString *formatterFormat;
     if (!gClockFormat) return nil;
-    if (!formatter) formatter = [[NSDateFormatter alloc] init];
+    if (!formatter) {
+        formatter = [[NSDateFormatter alloc] init];
+        formatter.timeZone = [NSTimeZone localTimeZone];   // follows the device if the zone changes
+    }
     if (![formatterFormat isEqualToString:gClockFormat]) {
         formatterFormat = [gClockFormat copy];
         @try { formatter.dateFormat = formatterFormat; } @catch (__unused NSException *e) { return nil; }
@@ -144,6 +147,11 @@ static void VLTSyncSecondsTimer(void) {
         NSDate *nextSecond = [NSDate dateWithTimeIntervalSinceReferenceDate:floor([NSDate timeIntervalSinceReferenceDate]) + 1.02];
         gSecondsTimer = [[NSTimer alloc] initWithFireDate:nextSecond interval:1 repeats:YES block:^(NSTimer *timer) {
             if ([UIApplication sharedApplication].applicationState == UIApplicationStateBackground && !gIsSpringBoard) return;
+            // Nothing to draw while the screen is off.
+            static int blankToken = -1;
+            if (blankToken == -1 && notify_register_check("com.apple.springboard.hasBlankedScreen", &blankToken) != NOTIFY_STATUS_OK) blankToken = -2;
+            uint64_t blanked = 0;
+            if (blankToken >= 0 && notify_get_state(blankToken, &blanked) == NOTIFY_STATUS_OK && blanked) return;
             VLTReplayText(VLTTextTime);
         }];
         gSecondsTimer.tolerance = 0.05;
@@ -165,7 +173,8 @@ static void VLTHookItem(NSString *className, uint32_t bit) {
     IMP *original = (IMP *)calloc(1, sizeof(IMP));   // lives as long as the hook
     if (!original) return;
     IMP replacement = imp_implementationWithBlock(^id(id item, id update, id displayItem) {
-        id result = *original ? ((id (*)(id, SEL, id, id))*original)(item, sel, update, displayItem) : nil;
+        IMP real = *original ?: class_getMethodImplementation(class_getSuperclass(cls), sel);
+        id result = real ? ((id (*)(id, SEL, id, id))real)(item, sel, update, displayItem) : nil;
         if ((gHide & bit) && [displayItem respondsToSelector:@selector(setEnabled:)]) [(_UIStatusBarDisplayItem *)displayItem setEnabled:NO];
         return result;
     });
@@ -425,6 +434,17 @@ static void VLTStatusRefresh(void) {
     for (UIView *bar in VLTBars().allObjects) {
         VLTApplyCutout(bar);
         [bar setNeedsLayout];
+    }
+    // Cutouts whose status bar has since moved to another window.
+    BOOL wanted = gCutout != 0 || gHomeBar;
+    for (UIView *cutout in VLTCutouts().allObjects) {
+        if (wanted) {
+            [cutout setNeedsLayout];
+            continue;
+        }
+        UIView *window = cutout.superview;
+        [cutout removeFromSuperview];
+        if (window) objc_setAssociatedObject(window, kCutoutKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
 }
 
