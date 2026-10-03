@@ -47,8 +47,6 @@
 
 #pragma mark - State
 
-extern void VLTIslandAnnounce(NSString *text);   // Status.x
-
 static VLTState gState;          // battery settings (all processes)
 static BOOL gIsSpringBoard;
 static BOOL gRefreshing;         // YES while we replay real values through our own hooks
@@ -414,18 +412,6 @@ static void VLTRefreshBattery(void) {
 
 - (void)setChargingState:(NSInteger)state {
     if (!gRefreshing) {
-        // Plugged in just now: the fake Dynamic Island (Status.x) says so.
-        NSNumber *before = objc_getAssociatedObject(self, kRealCharging);
-        if (before && before.integerValue != 1 && state == 1 && ((UIView *)self).window) {
-            static CFTimeInterval lastAnnounce;
-            CFTimeInterval now = CACurrentMediaTime();
-            if (now - lastAnnounce > 3) {
-                lastAnnounce = now;
-                NSNumber *real = objc_getAssociatedObject(self, kRealPercent);
-                long percent = VLTFlag1(VLTFake) ? (long)gState.fakePercent : lround((real ? real.doubleValue : self.chargePercent) * 100);
-                VLTIslandAnnounce([NSString stringWithFormat:@"⚡ %ld%%", percent]);
-            }
-        }
         objc_setAssociatedObject(self, kRealCharging, @(state), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     if (VLTActive()) {

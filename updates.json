@@ -1,5 +1,5 @@
 {
-  "version": "2.2.0",
-  "notes": "Four new apps (Weather, Compass, Voice Memos, Wallet), Lock Screen widgets, a custom volume indicator, a charging animation, fake 5G and signal bars, keyboard colors, and App Switcher styling.",
-  "url": "https://github.com/NotPrestonOnTop/volta/raw/main/releases/com.notpreston.volta_2.2.0_iphoneos-arm64.deb"
+  "version": "2.2.1",
+  "notes": "Fixes the fake notch and Dynamic Island showing up twice. They are now drawn once, at the top of whatever is on screen, with an option to pin them to the iPad's own top edge.",
+  "url": "https://github.com/NotPrestonOnTop/volta/raw/main/releases/com.notpreston.volta_2.2.1_iphoneos-arm64.deb"
 }

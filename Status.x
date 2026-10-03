@@ -1,6 +1,6 @@
-// Volta - status bar text, hidden status bar items, and the fake notch /
-// Dynamic Island / home bar. Loaded into SpringBoard and every app, because
-// each app draws its own status bar.
+// Volta - status bar text, hidden status bar items and the fake cellular
+// signal. Loaded into SpringBoard and every app, because each app draws its
+// own status bar. (The fake notch and Dynamic Island are in Popups.x.)
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
@@ -46,9 +46,6 @@ static NSString *gClockFormat;      // nil = the system's clock
 static NSInteger gDateMode;         // 0 system, 1 hidden, 2 own text
 static NSString *gDateText, *gCarrier;
 static uint32_t gHide;
-static NSInteger gCutout;           // 0 none, 1 notch, 2 Dynamic Island
-static CGFloat gCutWidth = 160, gCutHeight = 30, gCutTop = 6;
-static BOOL gCutCharge = YES, gCutLens = YES, gHomeBar;
 static BOOL gSigOn;
 static NSInteger gSigBars = 4;      // 0 ... 4
 static NSString *gSigType, *gSigCarrier;
@@ -76,15 +73,6 @@ static void VLTLoadStatus(void) {
                           @"sbHideAlarm", @"sbHideAirplane", @"sbHideVPN", @"sbHideBluetooth"];
         for (NSUInteger i = 0; i < keys.count; i++) if (VLTBool(s, keys[i], NO)) gHide |= (1u << i);
     }
-
-    gCutout = gOn ? (NSInteger)VLTNum(s, @"fakeCutout", 0) : 0;
-    if (gCutout < 0 || gCutout > 2) gCutout = 0;
-    gCutWidth  = fmin(fmax(VLTNum(s, @"fakeWidth", 160), 60), 320);
-    gCutHeight = fmin(fmax(VLTNum(s, @"fakeHeight", 30), 14), 60);
-    gCutTop    = fmin(fmax(VLTNum(s, @"fakeTop", 6), 0), 30);
-    gCutCharge = VLTBool(s, @"fakeCharge", YES);
-    gCutLens   = VLTBool(s, @"fakeLens", YES);
-    gHomeBar   = gOn && VLTBool(s, @"fakeHomeBar", NO);
 
     gSigOn = gOn && VLTBool(s, @"sigOn", NO);
     gSigBars = (NSInteger)fmin(fmax(VLTNum(s, @"sigBars", 4), 0), 4);
@@ -196,185 +184,13 @@ static void VLTHookItem(NSString *className, uint32_t bit) {
     MSHookMessageEx(cls, sel, replacement, original);
 }
 
-#pragma mark - Fake notch, Dynamic Island and home bar
-
-@interface VLTCutoutView : UIView
-- (void)announce:(NSString *)text;
-@end
-
-@implementation VLTCutoutView {
-    CAShapeLayer *_shape;
-    CALayer *_lens;
-    UILabel *_label;
-    CALayer *_homeBar;
-    BOOL _expanded;
-    NSUInteger _announceGen;
-}
-
-- (instancetype)initWithFrame:(CGRect)frame {
-    if ((self = [super initWithFrame:frame])) {
-        self.userInteractionEnabled = NO;
-        self.backgroundColor = [UIColor clearColor];
-        _shape = [CAShapeLayer layer];
-        _shape.fillColor = [UIColor blackColor].CGColor;
-        [self.layer addSublayer:_shape];
-        _lens = [CALayer layer];
-        _lens.backgroundColor = [UIColor colorWithRed:0.07 green:0.08 blue:0.16 alpha:1].CGColor;
-        _lens.borderColor = [UIColor colorWithWhite:0.16 alpha:1].CGColor;
-        _lens.borderWidth = 1;
-        [self.layer addSublayer:_lens];
-        _label = [[UILabel alloc] initWithFrame:CGRectZero];
-        _label.textColor = [UIColor colorWithRed:0.30 green:0.85 blue:0.39 alpha:1];
-        _label.font = [UIFont systemFontOfSize:12 weight:UIFontWeightSemibold];
-        _label.textAlignment = NSTextAlignmentCenter;
-        _label.alpha = 0;
-        [self addSubview:_label];
-        _homeBar = [CALayer layer];
-        _homeBar.backgroundColor = [UIColor colorWithWhite:1 alpha:0.92].CGColor;
-        _homeBar.shadowColor = [UIColor blackColor].CGColor;
-        _homeBar.shadowOpacity = 0.45;
-        _homeBar.shadowRadius = 2;
-        _homeBar.shadowOffset = CGSizeZero;
-        [self.layer addSublayer:_homeBar];
-    }
-    return self;
-}
-
-// iPhone-style notch: flat against the top edge, small flares where it meets
-// the edge, round bottom corners.
-static UIBezierPath *VLTNotchPath(CGRect rect) {
-    CGFloat x = rect.origin.x, y = rect.origin.y, w = rect.size.width, h = rect.size.height;
-    CGFloat ear = MIN(6, h / 3), corner = MIN(h * 0.62, w / 4);
-    UIBezierPath *path = [UIBezierPath bezierPath];
-    [path moveToPoint:CGPointMake(x - ear, y)];
-    [path addQuadCurveToPoint:CGPointMake(x, y + ear) controlPoint:CGPointMake(x, y)];
-    [path addLineToPoint:CGPointMake(x, y + h - corner)];
-    [path addQuadCurveToPoint:CGPointMake(x + corner, y + h) controlPoint:CGPointMake(x, y + h)];
-    [path addLineToPoint:CGPointMake(x + w - corner, y + h)];
-    [path addQuadCurveToPoint:CGPointMake(x + w, y + h - corner) controlPoint:CGPointMake(x + w, y + h)];
-    [path addLineToPoint:CGPointMake(x + w, y + ear)];
-    [path addQuadCurveToPoint:CGPointMake(x + w + ear, y) controlPoint:CGPointMake(x + w, y)];
-    [path closePath];
-    return path;
-}
-
-- (void)layoutSubviews {
-    [super layoutSubviews];
-    [CATransaction begin];
-    [CATransaction setDisableActions:YES];
-    CGSize size = self.bounds.size;
-    BOOL island = gCutout == 2, notch = gCutout == 1;
-    CGFloat width = gCutWidth + ((_expanded && island) ? 96 : 0), height = gCutHeight;
-    // Centre on the screen, not on this window: in Split View each app only has part of the screen,
-    // and each draws the part of the cutout that falls inside it.
-    CGFloat centerX = size.width / 2, bottom = size.height;
-    UIScreen *screen = self.window.screen;
-    if (screen) {
-        CGRect whole = screen.bounds;
-        CGPoint top = [self convertPoint:CGPointMake(CGRectGetMidX(whole), 0) fromCoordinateSpace:screen.coordinateSpace];
-        CGPoint foot = [self convertPoint:CGPointMake(CGRectGetMidX(whole), CGRectGetMaxY(whole)) fromCoordinateSpace:screen.coordinateSpace];
-        if (isfinite(top.x) && fabs(top.x) < 5000 && fabs(top.y) < 1) centerX = top.x;
-        if (isfinite(foot.y) && fabs(foot.y - size.height) < 1) bottom = foot.y;
-    }
-    CGRect cut = CGRectMake(centerX - width / 2, island ? gCutTop : 0, width, height);
-
-    _shape.frame = self.bounds;
-    _shape.hidden = !(island || notch);
-    if (island) _shape.path = [UIBezierPath bezierPathWithRoundedRect:cut cornerRadius:height / 2].CGPath;
-    else if (notch) _shape.path = VLTNotchPath(cut).CGPath;
-
-    CGFloat lens = MIN(11, height * 0.38);
-    _lens.hidden = _shape.hidden || !gCutLens;
-    _lens.cornerRadius = lens / 2;
-    _lens.frame = CGRectMake(CGRectGetMaxX(cut) - height / 2 - lens / 2 - (island ? 2 : width * 0.16),
-                             CGRectGetMidY(cut) - lens / 2, lens, lens);
-
-    _label.frame = CGRectInset(cut, height / 2, 0);
-
-    CGFloat barWidth = MIN(size.width * 0.34, 300);
-    _homeBar.hidden = !gHomeBar;
-    _homeBar.cornerRadius = 2.5;
-    _homeBar.frame = CGRectMake(centerX - barWidth / 2, bottom - 13, barWidth, 5);
-    [CATransaction commit];
-}
-
-// The island stretches for a moment to show a message (charging).
-- (void)announce:(NSString *)text {
-    if (gCutout != 2 || !gCutCharge || UIAccessibilityIsReduceMotionEnabled()) return;
-    NSUInteger generation = ++_announceGen;
-    _label.text = text;
-    _expanded = YES;
-    CABasicAnimation *morph = [CABasicAnimation animationWithKeyPath:@"path"];
-    morph.fromValue = (__bridge id)_shape.path;
-    morph.duration = 0.35;
-    morph.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-    [self layoutSubviews];
-    [_shape addAnimation:morph forKey:@"vltMorph"];
-    [UIView animateWithDuration:0.25 delay:0.15 options:0 animations:^{ self->_label.alpha = 1; } completion:nil];
-
-    __weak typeof(self) weakSelf = self;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        typeof(self) strongSelf = weakSelf;
-        if (!strongSelf || strongSelf->_announceGen != generation) return;
-        strongSelf->_expanded = NO;
-        CABasicAnimation *back = [CABasicAnimation animationWithKeyPath:@"path"];
-        back.fromValue = (__bridge id)strongSelf->_shape.path;
-        back.duration = 0.35;
-        back.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-        strongSelf->_label.alpha = 0;
-        [strongSelf layoutSubviews];
-        [strongSelf->_shape addAnimation:back forKey:@"vltMorph"];
-    });
-}
-
-@end
-
-static const void *kCutoutKey = &kCutoutKey;
+#pragma mark - Status bars on screen
 
 static NSHashTable *VLTBars(void) {
     static NSHashTable *table;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ table = [NSHashTable weakObjectsHashTable]; });
     return table;
-}
-
-static NSHashTable *VLTCutouts(void) {
-    static NSHashTable *table;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{ table = [NSHashTable weakObjectsHashTable]; });
-    return table;
-}
-
-// The cutout lives in the window that holds the status bar: a view that takes
-// no touches, kept in front. Nothing is added when every fake is off.
-static void VLTApplyCutout(UIView *statusBar) {
-    UIWindow *window = statusBar.window;
-    if (!window) return;
-    VLTCutoutView *cutout = objc_getAssociatedObject(window, kCutoutKey);
-    BOOL wanted = (gCutout != 0 || gHomeBar) && window.bounds.size.height > 200 && window.bounds.size.width > 200;
-    if (!wanted) {
-        if (cutout) {
-            [cutout removeFromSuperview];
-            objc_setAssociatedObject(window, kCutoutKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        }
-        return;
-    }
-    if (!cutout) {
-        cutout = [[VLTCutoutView alloc] initWithFrame:window.bounds];
-        objc_setAssociatedObject(window, kCutoutKey, cutout, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        [VLTCutouts() addObject:cutout];
-    }
-    if (cutout.superview != window) [window addSubview:cutout];
-    else if (window.subviews.lastObject != cutout) [window bringSubviewToFront:cutout];
-    if (!CGRectEqualToRect(cutout.frame, window.bounds)) cutout.frame = window.bounds;
-    [cutout setNeedsLayout];
-}
-
-// Called by the battery hooks (Tweak.x) when the device starts charging.
-void VLTIslandAnnounce(NSString *text) {
-    for (VLTCutoutView *cutout in VLTCutouts().allObjects) {
-        if (cutout.window) [cutout announce:text];
-    }
 }
 
 #pragma mark - Fake cellular signal
@@ -568,7 +384,6 @@ static void VLTApplySignal(UIView *bar) {
     %orig;
     if (!((UIView *)self).window) return;
     [VLTBars() addObject:self];
-    VLTApplyCutout((UIView *)self);
 }
 
 // Items come and go without the bar itself laying out; follow them.
@@ -579,7 +394,6 @@ static void VLTApplySignal(UIView *bar) {
 
 - (void)layoutSubviews {
     %orig;
-    if (gCutout != 0 || gHomeBar) VLTApplyCutout((UIView *)self);
     if (gSigOn || objc_getAssociatedObject(self, kSignalKey)) VLTApplySignal((UIView *)self);
 }
 
@@ -592,21 +406,9 @@ static void VLTStatusRefresh(void) {
     VLTSyncSecondsTimer();
     VLTReplayText(0);
     for (UIView *bar in VLTBars().allObjects) {
-        VLTApplyCutout(bar);
         VLTApplySignal(bar);
         [(UIView *)objc_getAssociatedObject(bar, kSignalKey) setNeedsDisplay];
         [bar setNeedsLayout];
-    }
-    // Cutouts whose status bar has since moved to another window.
-    BOOL wanted = gCutout != 0 || gHomeBar;
-    for (UIView *cutout in VLTCutouts().allObjects) {
-        if (wanted) {
-            [cutout setNeedsLayout];
-            continue;
-        }
-        UIView *window = cutout.superview;
-        [cutout removeFromSuperview];
-        if (window) objc_setAssociatedObject(window, kCutoutKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
 }
 

@@ -18,7 +18,7 @@
 #define VLT_NOTIFY_PREFS    VLT_DOMAIN "/prefs"     // Settings -> SpringBoard: prefs changed
 #define VLT_NOTIFY_APPLY    VLT_DOMAIN "/apply"     // SpringBoard -> everyone: state republished
 #define VLT_NOTIFY_RESPRING VLT_DOMAIN "/respring"  // Settings -> SpringBoard
-#define VLT_VERSION         "2.2.0"   // keep in step with the "control" file
+#define VLT_VERSION         "2.2.1"   // keep in step with the "control" file
 #define VLT_STATE_VERSION   3
 
 // Custom battery picture. SpringBoard writes it here so that apps, which can

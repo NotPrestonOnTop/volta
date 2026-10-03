@@ -1,7 +1,8 @@
-// Volta - things that pop up over everything: a custom volume / brightness
-// indicator and a charging animation. SpringBoard only.
+// Volta - things drawn over everything: a custom volume / brightness
+// indicator, a charging animation, and the fake notch / Dynamic Island / home
+// bar. SpringBoard only.
 //
-// Both are drawn in one small window of Volta's own that takes no touches and
+// All of it is drawn in one window of Volta's own that takes no touches and
 // is hidden whenever nothing is showing.
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
@@ -17,6 +18,9 @@ static UIColor *gHudColor;
 static BOOL gChargeOn;
 static NSInteger gChargeStyle;      // 0 ring, 1 battery filling up, 2 bolt
 static UIColor *gChargeColor;
+static NSInteger gCutout;           // 0 none, 1 notch, 2 Dynamic Island
+static CGFloat gCutWidth = 160, gCutHeight = 30, gCutTop = 6;
+static BOOL gCutCharge = YES, gCutLens = YES, gHomeBar, gCutFixed;
 
 static void VLTLoadPopupPrefs(void) {
     NSDictionary *p = VLTCopyPrefs();
@@ -31,6 +35,15 @@ static void VLTLoadPopupPrefs(void) {
     gChargeStyle = (NSInteger)VLTNum(p, @"chargeStyle", 0);
     if (gChargeStyle < 0 || gChargeStyle > 2) gChargeStyle = 0;
     gChargeColor = VLTColorFromHex(p[@"chargeColor"]) ?: [UIColor colorWithRed:0.20 green:0.78 blue:0.35 alpha:1];
+    gCutout = on ? (NSInteger)VLTNum(p, @"fakeCutout", 0) : 0;
+    if (gCutout < 0 || gCutout > 2) gCutout = 0;
+    gCutWidth  = fmin(fmax(VLTNum(p, @"fakeWidth", 160), 60), 320);
+    gCutHeight = fmin(fmax(VLTNum(p, @"fakeHeight", 30), 14), 60);
+    gCutTop    = fmin(fmax(VLTNum(p, @"fakeTop", 6), 0), 30);
+    gCutCharge = VLTBool(p, @"fakeCharge", YES);
+    gCutLens   = VLTBool(p, @"fakeLens", YES);
+    gHomeBar   = on && VLTBool(p, @"fakeHomeBar", NO);
+    gCutFixed  = VLTBool(p, @"fakeFixed", NO);
 }
 
 #pragma mark - The window
@@ -42,7 +55,13 @@ static void VLTLoadPopupPrefs(void) {
 @interface VLTPopupController : UIViewController
 @end
 
+static void VLTLayoutCutout(void);
+
 @implementation VLTPopupController
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    if (gCutout != 0 || gHomeBar) VLTLayoutCutout();   // the window turned or changed size
+}
 - (BOOL)shouldAutorotate { return YES; }
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations { return UIInterfaceOrientationMaskAll; }
 - (BOOL)prefersStatusBarHidden { return NO; }
@@ -458,6 +477,194 @@ static void VLTPlayCharge(void) {
     }];
 }
 
+#pragma mark - Fake notch, Dynamic Island and home bar
+
+// Drawn once, here, for the whole device. (Each app drawing its own made two
+// of them whenever an app and the Home Screen disagreed about which way is up.)
+
+@interface VLTCutoutView : UIView
+- (void)announce:(NSString *)text;
+@end
+
+@implementation VLTCutoutView {
+    CAShapeLayer *_shape;
+    CALayer *_lens;
+    UILabel *_label;
+    CALayer *_homeBar;
+    BOOL _expanded;
+    NSUInteger _announceGen;
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    if ((self = [super initWithFrame:frame])) {
+        self.userInteractionEnabled = NO;
+        self.backgroundColor = [UIColor clearColor];
+        _shape = [CAShapeLayer layer];
+        _shape.fillColor = [UIColor blackColor].CGColor;
+        [self.layer addSublayer:_shape];
+        _lens = [CALayer layer];
+        _lens.backgroundColor = [UIColor colorWithRed:0.07 green:0.08 blue:0.16 alpha:1].CGColor;
+        _lens.borderColor = [UIColor colorWithWhite:0.16 alpha:1].CGColor;
+        _lens.borderWidth = 1;
+        [self.layer addSublayer:_lens];
+        _label = [[UILabel alloc] initWithFrame:CGRectZero];
+        _label.textColor = [UIColor colorWithRed:0.30 green:0.85 blue:0.39 alpha:1];
+        _label.font = [UIFont systemFontOfSize:12 weight:UIFontWeightSemibold];
+        _label.textAlignment = NSTextAlignmentCenter;
+        _label.alpha = 0;
+        [self addSubview:_label];
+        _homeBar = [CALayer layer];
+        _homeBar.backgroundColor = [UIColor colorWithWhite:1 alpha:0.92].CGColor;
+        _homeBar.shadowColor = [UIColor blackColor].CGColor;
+        _homeBar.shadowOpacity = 0.45;
+        _homeBar.shadowRadius = 2;
+        _homeBar.shadowOffset = CGSizeZero;
+        [self.layer addSublayer:_homeBar];
+    }
+    return self;
+}
+
+// iPhone-style notch: flat against the top edge, small flares where it meets
+// the edge, round bottom corners.
+static UIBezierPath *VLTNotchPath(CGRect rect) {
+    CGFloat x = rect.origin.x, y = rect.origin.y, w = rect.size.width, h = rect.size.height;
+    CGFloat ear = MIN(6, h / 3), corner = MIN(h * 0.62, w / 4);
+    UIBezierPath *path = [UIBezierPath bezierPath];
+    [path moveToPoint:CGPointMake(x - ear, y)];
+    [path addQuadCurveToPoint:CGPointMake(x, y + ear) controlPoint:CGPointMake(x, y)];
+    [path addLineToPoint:CGPointMake(x, y + h - corner)];
+    [path addQuadCurveToPoint:CGPointMake(x + corner, y + h) controlPoint:CGPointMake(x, y + h)];
+    [path addLineToPoint:CGPointMake(x + w - corner, y + h)];
+    [path addQuadCurveToPoint:CGPointMake(x + w, y + h - corner) controlPoint:CGPointMake(x + w, y + h)];
+    [path addLineToPoint:CGPointMake(x + w, y + ear)];
+    [path addQuadCurveToPoint:CGPointMake(x + w + ear, y) controlPoint:CGPointMake(x + w, y)];
+    [path closePath];
+    return path;
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    CGSize size = self.bounds.size;
+    BOOL island = gCutout == 2, notch = gCutout == 1;
+    CGFloat width = gCutWidth + ((_expanded && island) ? 96 : 0), height = gCutHeight;
+    CGRect cut = CGRectMake((size.width - width) / 2, island ? gCutTop : 0, width, height);
+
+    _shape.frame = self.bounds;
+    _shape.hidden = !(island || notch);
+    if (island) _shape.path = [UIBezierPath bezierPathWithRoundedRect:cut cornerRadius:height / 2].CGPath;
+    else if (notch) _shape.path = VLTNotchPath(cut).CGPath;
+
+    CGFloat lens = MIN(11, height * 0.38);
+    _lens.hidden = _shape.hidden || !gCutLens;
+    _lens.cornerRadius = lens / 2;
+    _lens.frame = CGRectMake(CGRectGetMaxX(cut) - height / 2 - lens / 2 - (island ? 2 : width * 0.16),
+                             CGRectGetMidY(cut) - lens / 2, lens, lens);
+
+    _label.frame = CGRectInset(cut, height / 2, 0);
+
+    CGFloat barWidth = MIN(size.width * 0.34, 300);
+    _homeBar.hidden = !gHomeBar;
+    _homeBar.cornerRadius = 2.5;
+    _homeBar.frame = CGRectMake((size.width - barWidth) / 2, size.height - 13, barWidth, 5);
+    [CATransaction commit];
+}
+
+// The island stretches for a moment to show a message (charging).
+- (void)announce:(NSString *)text {
+    if (gCutout != 2 || !gCutCharge || UIAccessibilityIsReduceMotionEnabled()) return;
+    NSUInteger generation = ++_announceGen;
+    _label.text = text;
+    _expanded = YES;
+    CABasicAnimation *morph = [CABasicAnimation animationWithKeyPath:@"path"];
+    morph.fromValue = (__bridge id)_shape.path;
+    morph.duration = 0.35;
+    morph.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    [self layoutSubviews];
+    [_shape addAnimation:morph forKey:@"vltMorph"];
+    [UIView animateWithDuration:0.25 delay:0.15 options:0 animations:^{ self->_label.alpha = 1; } completion:nil];
+
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        typeof(self) strongSelf = weakSelf;
+        if (!strongSelf || strongSelf->_announceGen != generation) return;
+        strongSelf->_expanded = NO;
+        CABasicAnimation *back = [CABasicAnimation animationWithKeyPath:@"path"];
+        back.fromValue = (__bridge id)strongSelf->_shape.path;
+        back.duration = 0.35;
+        back.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+        strongSelf->_label.alpha = 0;
+        [strongSelf layoutSubviews];
+        [strongSelf->_shape addAnimation:back forKey:@"vltMorph"];
+    });
+}
+
+@end
+
+static VLTCutoutView *gCutoutView;
+static BOOL gCutoutShown;
+
+// Which way an interface's top edge points, as a clockwise angle from the
+// device's own top (the short edge away from the Home button).
+static CGFloat VLTTopAngle(UIInterfaceOrientation orientation) {
+    switch (orientation) {
+        case UIInterfaceOrientationPortraitUpsideDown: return M_PI;
+        case UIInterfaceOrientationLandscapeLeft:      return M_PI_2;    // Home button on the left
+        case UIInterfaceOrientationLandscapeRight:     return -M_PI_2;   // Home button on the right
+        default:                                       return 0;
+    }
+}
+
+// The way up for whatever is on screen right now, as SpringBoard sees it.
+static UIInterfaceOrientation VLTActiveOrientation(void) {
+    UIApplication *app = [UIApplication sharedApplication];
+    SEL selector = NSSelectorFromString(@"activeInterfaceOrientation");
+    if ([app respondsToSelector:selector]) {
+        long long value = ((long long (*)(id, SEL))objc_msgSend)(app, selector);
+        if (value >= UIInterfaceOrientationPortrait && value <= UIInterfaceOrientationLandscapeRight) return (UIInterfaceOrientation)value;
+    }
+    UIInterfaceOrientation mine = gWindow.windowScene.interfaceOrientation;
+    return mine == UIInterfaceOrientationUnknown ? UIInterfaceOrientationPortrait : mine;
+}
+
+static NSInteger gCutoutApplied = -1;   // the orientation the cutout was last laid out for
+
+// Shows, hides and turns the cutout. It sits at the top of what is on screen,
+// or, with "fixed", on the device's own top edge like real hardware.
+static void VLTLayoutCutout(void) {
+    BOOL wanted = gCutout != 0 || gHomeBar;
+    if (!wanted) {
+        if (gCutoutShown) {
+            [gCutoutView removeFromSuperview];
+            gCutoutShown = NO;
+            VLTPopupEnd();
+        }
+        return;
+    }
+    UIView *host = VLTPopupHost();
+    if (!gCutoutView) gCutoutView = [[VLTCutoutView alloc] initWithFrame:host.bounds];
+    if (!gCutoutShown) {
+        gCutoutShown = YES;
+        VLTPopupBegin();
+    }
+    if (gCutoutView.superview != host) [host addSubview:gCutoutView];
+    else if (host.subviews.lastObject != gCutoutView) [host bringSubviewToFront:gCutoutView];
+
+    UIInterfaceOrientation mine = gWindow.windowScene.interfaceOrientation;
+    if (mine == UIInterfaceOrientationUnknown) mine = UIInterfaceOrientationPortrait;
+    UIInterfaceOrientation target = gCutFixed ? UIInterfaceOrientationPortrait : VLTActiveOrientation();
+    gCutoutApplied = target;
+    CGFloat angle = VLTTopAngle(target) - VLTTopAngle(mine);
+    BOOL sideways = fabs(fabs(remainder(angle, M_PI)) - M_PI_2) < 0.01;
+    CGSize size = host.bounds.size;
+    gCutoutView.transform = CGAffineTransformIdentity;
+    gCutoutView.bounds = sideways ? CGRectMake(0, 0, size.height, size.width) : CGRectMake(0, 0, size.width, size.height);
+    gCutoutView.center = CGPointMake(size.width / 2, size.height / 2);
+    gCutoutView.transform = CGAffineTransformMakeRotation(angle);
+    [gCutoutView setNeedsLayout];
+}
+
 #pragma mark - Hooks and observers
 
 %group Popups
@@ -482,7 +689,10 @@ static void VLTPlayCharge(void) {
 %end // group Popups
 
 static void VLTPopupPrefsChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef info) {
-    dispatch_async(dispatch_get_main_queue(), ^{ VLTLoadPopupPrefs(); });
+    dispatch_async(dispatch_get_main_queue(), ^{
+        VLTLoadPopupPrefs();
+        VLTLayoutCutout();
+    });
 }
 
 // Fired from Settings: "Preview" buttons.
@@ -514,9 +724,30 @@ static void VLTPopupPreview(CFNotificationCenterRef center, void *observer, CFSt
                 UIDeviceBatteryState state = [UIDevice currentDevice].batteryState;
                 BOOL was = last == UIDeviceBatteryStateCharging || last == UIDeviceBatteryStateFull;
                 BOOL is = state == UIDeviceBatteryStateCharging || state == UIDeviceBatteryStateFull;
-                if (gChargeOn && is && !was && last != UIDeviceBatteryStateUnknown) VLTPlayCharge();
+                if (is && !was && last != UIDeviceBatteryStateUnknown) {
+                    if (gChargeOn) VLTPlayCharge();
+                    float level = [UIDevice currentDevice].batteryLevel;
+                    if (gCutoutShown && level >= 0) [gCutoutView announce:[NSString stringWithFormat:@"⚡ %ld%%", lround(level * 100)]];
+                }
                 last = state;
             }];
+
+            // The cutout: put it up once SpringBoard has settled, and keep it at the top of
+            // whatever is showing. Apps can be opened sideways without the device turning,
+            // so besides the rotation notices there is a light check every two seconds.
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ VLTLayoutCutout(); });
+            void (^turned)(NSNotification *) = ^(NSNotification *note) {
+                if (gCutout == 0 && !gHomeBar) return;
+                VLTLayoutCutout();
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ VLTLayoutCutout(); });
+            };
+            for (NSString *name in @[UIDeviceOrientationDidChangeNotification, @"UIApplicationDidChangeStatusBarOrientationNotification"])
+                [[NSNotificationCenter defaultCenter] addObserverForName:name object:nil queue:[NSOperationQueue mainQueue] usingBlock:turned];
+            NSTimer *watch = [NSTimer scheduledTimerWithTimeInterval:2 repeats:YES block:^(NSTimer *timer) {
+                if (!gCutoutShown || gCutFixed) return;
+                if ((NSInteger)VLTActiveOrientation() != gCutoutApplied) VLTLayoutCutout();
+            }];
+            watch.tolerance = 1;
 
             // Brightness: only for a clear change (a drag), not the slow drift of auto-brightness.
             __block CGFloat baseline = [UIScreen mainScreen].brightness;

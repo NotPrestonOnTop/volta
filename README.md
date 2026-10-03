@@ -100,7 +100,7 @@ Everything is visual only. The real battery level and system behaviour are untou
 
 ## Install
 
-Download [`com.notpreston.volta_2.2.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.2.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
+Download [`com.notpreston.volta_2.2.1_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.2.1_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
 For rootless jailbreaks (Dopamine, palera1n rootless) on iOS 15 – 17.
 Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader.
 
@@ -112,12 +112,12 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
 ## Layout
 
     Tweak.x              hooks: battery (all apps) and Control Center (SpringBoard)
-    Status.x             hooks: status bar text, hidden items, fake notch / Dynamic Island / home bar (all apps)
+    Status.x             hooks: status bar text, hidden items, fake cellular signal (all apps)
     Icons.x              hooks: Home Screen layout and icon themes (SpringBoard only)
     LockLook.x           hooks: Lock Screen clock, message and hidden bits (SpringBoard only)
     Notify.x             hooks: notification styling (SpringBoard only)
     Switcher.x           hooks: App Switcher cards (SpringBoard only)
-    Popups.x             the volume / brightness indicator and the charging animation (SpringBoard only)
+    Popups.x             the volume / brightness indicator, the charging animation, and the fake notch / Dynamic Island / home bar (SpringBoard only)
     Keyboard.x           hooks: keyboard appearance and color (all apps)
     VLTIconTheme.h       icon shapes and tints; shared with the Settings preview
     VLTLook.h            small helpers shared by the look-and-feel hooks
@@ -172,7 +172,7 @@ This repository hosts one; paste this link into About > Update link:
 For a new version: add the new .deb to `releases/`, then change `version`, `notes` and `url` in
 [`updates.json`](updates.json). The file looks like this:
 
-    { "version": "2.2.0", "notes": "What changed", "url": "https://where-to-download" }
+    { "version": "2.2.1", "notes": "What changed", "url": "https://where-to-download" }
 
 Volta checks it once a day and compares `version` with its own. When you release a new
 build, bump `Version` in `control` and `VLT_VERSION` in `VLTShared.h`, then update the file.

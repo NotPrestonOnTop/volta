@@ -22,7 +22,7 @@ static void VLTAboutSetPref(NSString *key, id value) {
 #pragma mark - Updater
 
 // The feed is a small JSON file you host anywhere that serves it over https:
-//   { "version": "2.2.0", "notes": "What changed", "url": "https://link-to-the-download" }
+//   { "version": "2.2.1", "notes": "What changed", "url": "https://link-to-the-download" }
 // A plain text file containing only a version number works too.
 @implementation VLTUpdater
 
@@ -292,7 +292,7 @@ static UILabel *VLTAboutText(NSString *text, UIColor *color) {
     UIView *updates = VLTAboutCard(@"Updates", @[
         _updateStatus, _checkButton, _openButton,
         VLTAboutText(@"Update link", [UIColor secondaryLabelColor]), _feedField,
-        VLTAboutText(@"Volta has no server of its own. Put a small file online that says what the newest version is, paste its link here, and Volta checks it once a day. The file looks like this:\n\n{ \"version\": \"2.2.0\", \"notes\": \"What changed\", \"url\": \"https://where-to-download\" }",
+        VLTAboutText(@"Volta has no server of its own. Put a small file online that says what the newest version is, paste its link here, and Volta checks it once a day. The file looks like this:\n\n{ \"version\": \"2.2.1\", \"notes\": \"What changed\", \"url\": \"https://where-to-download\" }",
                      [UIColor secondaryLabelColor]),
     ]);
 

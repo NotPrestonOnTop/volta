@@ -390,7 +390,7 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>Draws an iPhone-style notch or Dynamic Island at the top of the screen, in every app. It is only a picture: touches go straight through it.</string>
+			<string>Draws an iPhone-style notch or Dynamic Island over everything. It is only a picture: touches go straight through it. It normally sits at the top of whatever is on screen; Stay on the iPad's Top Edge pins it to the short edge away from the Home button, like real hardware, so it ends up at the side when you hold the iPad sideways.</string>
 			<key>label</key>
 			<string>Fake Hardware</string>
 		</dict>
@@ -421,6 +421,20 @@
 				<integer>1</integer>
 				<integer>2</integer>
 			</array>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>fakeFixed</string>
+			<key>label</key>
+			<string>Stay on the iPad's Top Edge</string>
 		</dict>
 		<dict>
 			<key>PostNotification</key>
