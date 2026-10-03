@@ -703,7 +703,7 @@ static void VLTPackChanged(NSString *folder) {
 // Not part of a look: the update checker's bookkeeping, which apps are shown,
 // and things only true of this device.
 static BOOL VLTProfileSkipsKey(NSString *key) {
-    return [key hasPrefix:@"update"] || [key isEqualToString:@"appPhone"] || [key isEqualToString:@"appCalc"] ||
+    return [key hasPrefix:@"update"] || [key isEqualToString:@"appPhone"] || [key isEqualToString:@"appCalc"] || [key isEqualToString:@"appTweaks"] ||
            [key isEqualToString:@"iconDir"] || [key isEqualToString:@"ccModuleInfo"];   // facts about this device
 }
 

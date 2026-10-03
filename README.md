@@ -1,6 +1,6 @@
 # Volta
 
-Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta** pane to Settings with a card dashboard of twelve pages, most with a live preview:
+Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta** pane to Settings with a dashboard of six cards (Status Bar, Home Screen, Lock & Alerts, Control Center, Fun, More). A card with several pages opens a short list of them; most pages have a live preview:
 
 **Battery** (status bar, in every app)
 - Animated pictures: add Pulse, Bounce, Wobble, Spin, Blink or Shake to any still picture, or build your own in the Animation Creator (draw 16 × 16 pixel frames, add photos, or import a GIF; up to 24 frames), with named save slots
@@ -42,6 +42,7 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 **Apps for iPad** (installed with the tweak, shown on the Home Screen)
 - Phone: keypad with touch tones, favorites and recents. It cannot place cellular calls; "calling" ends by offering FaceTime Audio
 - Calculator: a working four-function calculator
+- **Voltweaks**: a tweak manager. Lists every tweak the jailbreak loads, with the package it came from, its version and author, and what it loads into; switch any tweak off or on (takes effect after a respring, nothing is deleted), turn everything off at once to hunt down a misbehaving tweak, search, and respring from the app
 - Each app has an on/off switch on the main Volta page
 
 **Fun** (all off by default)
@@ -83,7 +84,7 @@ Everything is visual only. The real battery level and system behaviour are untou
 
 ## Install
 
-Download [`com.notpreston.volta_2.0.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.0.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
+Download [`com.notpreston.volta_2.1.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.1.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
 For rootless jailbreaks (Dopamine, palera1n rootless) on iOS 15 – 17.
 Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader.
 
@@ -113,6 +114,9 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     layout/              install script and the folder the custom picture is shared from
     voltaphone/          the Phone app
     voltacalc/           the Calculator app; CalcCore.h is its arithmetic, testable on its own
+    voltweaks/           the Voltweaks app (tweak manager)
+    voltweakshelper/     the small set-uid tool Voltweaks uses to rename a tweak's file; it only ever renames
+                         <Name>.dylib <-> <Name>.disabled inside the tweak folder
     voltaprefs/          Settings pane
       VLTControllers.m   the pages, color picker, respring, reset
       VLTMore.m          Home Screen, Icons, Status Bar and Notifications pages; icon pack import; profiles
@@ -145,7 +149,7 @@ This repository hosts one; paste this link into About > Update link:
 For a new version: add the new .deb to `releases/`, then change `version`, `notes` and `url` in
 [`updates.json`](updates.json). The file looks like this:
 
-    { "version": "2.0.0", "notes": "What changed", "url": "https://where-to-download" }
+    { "version": "2.1.0", "notes": "What changed", "url": "https://where-to-download" }
 
 Volta checks it once a day and compares `version` with its own. When you release a new
 build, bump `Version` in `control` and `VLT_VERSION` in `VLTShared.h`, then update the file.

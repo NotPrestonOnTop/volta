@@ -102,6 +102,50 @@ static UIFont *VLTRounded(CGFloat size, UIFontWeight weight) {
 
 @end
 
+#pragma mark - Pages in lists
+
+typedef struct { VLTPage page; const char *title; const char *symbol; uint32_t from, to; } VLTPageLook;
+
+static const VLTPageLook kPageLooks[] = {
+    { VLTPageBattery,   "Battery",           "battery.100",             0x4CD964, 0x1E9E4A },
+    { VLTPageStatus,    "Clock, Items & Fakes", "wifi",                 0x64D2FF, 0x3A7BFF },
+    { VLTPageCC,        "Control Center",    "switch.2",                0x5B5BF0, 0x19C8B9 },
+    { VLTPageHome,      "Layout",            "square.grid.3x3.fill",    0x34C8A0, 0x0E8F8A },
+    { VLTPageIcons,     "Icons",             "app.badge.fill",          0xFF9F0A, 0xFF5E3A },
+    { VLTPageDock,      "Dock",              "dock.rectangle",          0xFFB020, 0xFF6B2C },
+    { VLTPageWallpaper, "Wallpaper",         "sparkles",                0xBF5AF2, 0xFF4F8B },
+    { VLTPageLock,      "Lock Screen",       "lock.fill",               0x40C8E0, 0x0A84FF },
+    { VLTPageNotif,     "Notifications",     "bell.badge.fill",         0xFF6B6B, 0xD9304F },
+    { VLTPageFun,       "Fun",               "party.popper.fill",       0xF953C6, 0xB91D73 },
+    { VLTPageProfiles,  "Profiles",          "square.stack.3d.up.fill", 0x8E8CF5, 0x5B4BD6 },
+    { VLTPageAbout,     "About & Updates",   "heart.fill",              0xFF6482, 0xFF2D55 },
+};
+
+static const VLTPageLook *VLTLookFor(VLTPage page) {
+    for (size_t i = 0; i < sizeof(kPageLooks) / sizeof(kPageLooks[0]); i++) if (kPageLooks[i].page == page) return &kPageLooks[i];
+    return &kPageLooks[0];
+}
+
+NSString *VLTPageTitle(VLTPage page) { return @(VLTLookFor(page)->title); }
+
+UIImage *VLTPageTile(VLTPage page, CGFloat side) {
+    const VLTPageLook *look = VLTLookFor(page);
+    UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat preferredFormat];
+    format.opaque = NO;
+    return [[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(side, side) format:format] imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        [[UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, side, side) cornerRadius:side * 0.28] addClip];
+        CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+        CGGradientRef gradient = CGGradientCreateWithColors(space, (__bridge CFArrayRef)@[(id)HEX(look->from).CGColor, (id)HEX(look->to).CGColor], NULL);
+        CGContextDrawLinearGradient(context.CGContext, gradient, CGPointZero, CGPointMake(side, side), 0);
+        CGGradientRelease(gradient);
+        CGColorSpaceRelease(space);
+        UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:side * 0.44 weight:UIImageSymbolWeightSemibold];
+        UIImage *glyph = [[UIImage systemImageNamed:@(look->symbol) withConfiguration:config] ?: [UIImage systemImageNamed:@"circle.fill" withConfiguration:config]
+                          imageWithTintColor:[UIColor whiteColor] renderingMode:UIImageRenderingModeAlwaysOriginal];
+        [glyph drawAtPoint:CGPointMake((side - glyph.size.width) / 2, (side - glyph.size.height) / 2)];
+    }];
+}
+
 #pragma mark - Dashboard
 
 static const CGFloat kBannerHeight = 130, kCardHeight = 116, kCardGap = 12;
@@ -115,20 +159,13 @@ static const CGFloat kBannerHeight = 130, kCardHeight = 116, kCardGap = 12;
     if ((self = [super initWithFrame:frame])) {
         _banner = [[VLTHeaderView alloc] initWithFrame:CGRectZero];
         [self addSubview:_banner];
-        _cards = @[
-            // Same order as VLTPage in VLTPreviews.h
-            [[VLTCard alloc] initWithTitle:@"Battery" symbol:@"battery.100" from:HEX(0x4CD964) to:HEX(0x1E9E4A)],
-            [[VLTCard alloc] initWithTitle:@"Status Bar" symbol:@"wifi" from:HEX(0x64D2FF) to:HEX(0x3A7BFF)],
+        _cards = @[   // same order as VLTGroup
+            [[VLTCard alloc] initWithTitle:@"Status Bar" symbol:@"battery.100" from:HEX(0x4CD964) to:HEX(0x1E9E4A)],
+            [[VLTCard alloc] initWithTitle:@"Home Screen" symbol:@"square.grid.3x3.fill" from:HEX(0xFF9F0A) to:HEX(0xFF5E3A)],
+            [[VLTCard alloc] initWithTitle:@"Lock & Alerts" symbol:@"lock.fill" from:HEX(0x40C8E0) to:HEX(0x0A84FF)],
             [[VLTCard alloc] initWithTitle:@"Control Center" symbol:@"switch.2" from:HEX(0x5B5BF0) to:HEX(0x19C8B9)],
-            [[VLTCard alloc] initWithTitle:@"Home Screen" symbol:@"square.grid.3x3.fill" from:HEX(0x34C8A0) to:HEX(0x0E8F8A)],
-            [[VLTCard alloc] initWithTitle:@"Icons" symbol:@"app.badge.fill" from:HEX(0xFF9F0A) to:HEX(0xFF5E3A)],
-            [[VLTCard alloc] initWithTitle:@"Dock" symbol:@"dock.rectangle" from:HEX(0xFFB020) to:HEX(0xFF6B2C)],
-            [[VLTCard alloc] initWithTitle:@"Wallpaper" symbol:@"sparkles" from:HEX(0xBF5AF2) to:HEX(0xFF4F8B)],
-            [[VLTCard alloc] initWithTitle:@"Lock Screen" symbol:@"lock.fill" from:HEX(0x40C8E0) to:HEX(0x0A84FF)],
-            [[VLTCard alloc] initWithTitle:@"Notifications" symbol:@"bell.badge.fill" from:HEX(0xFF6B6B) to:HEX(0xD9304F)],
             [[VLTCard alloc] initWithTitle:@"Fun" symbol:@"party.popper.fill" from:HEX(0xF953C6) to:HEX(0xB91D73)],
-            [[VLTCard alloc] initWithTitle:@"Profiles" symbol:@"square.stack.3d.up.fill" from:HEX(0x8E8CF5) to:HEX(0x5B4BD6)],
-            [[VLTCard alloc] initWithTitle:@"About" symbol:@"heart.fill" from:HEX(0xFF6482) to:HEX(0xFF2D55)],
+            [[VLTCard alloc] initWithTitle:@"More" symbol:@"ellipsis" from:HEX(0x8E8CF5) to:HEX(0x5B4BD6)],
         ];
         NSInteger index = 0;
         for (VLTCard *card in _cards) {

@@ -43,7 +43,7 @@ static CGFloat gBounce = 0.55, gPull = 1.4;
 // Elsewhere
 static BOOL gConfetti, gFortune, gWobbleCC, gDizzyClock;
 static NSInteger gNames;        // 0 off, 1 backwards, 2 sPoNgE, 3 everything is Bob (read once, at launch)
-static BOOL gAppPhone = YES, gAppCalc = YES;
+static BOOL gAppPhone = YES, gAppCalc = YES, gAppTweaks = YES;
 static BOOL gLocked;            // screen is locked: the busy effects take a break
 static BOOL gExplodeArmed;      // set from Settings; goes off on the next Home Screen touch
 
@@ -71,6 +71,7 @@ static void VLTLoadFunPrefs(void) {
     // The apps are independent of the master switch: turning Volta off should not make icons vanish.
     gAppPhone = VLTBool(p, @"appPhone", YES);
     gAppCalc  = VLTBool(p, @"appCalc", YES);
+    gAppTweaks = VLTBool(p, @"appTweaks", YES);
 }
 
 static inline BOOL VLTCalm(void) { return UIAccessibilityIsReduceMotionEnabled(); }
@@ -1109,7 +1110,8 @@ static void VLTSyncApps(void) {
     static NSMutableSet *attempted;
     if (!attempted) attempted = [NSMutableSet set];
     NSArray *apps = @[@[@"com.notpreston.volta.phone", @"/var/jb/Applications/VoltaPhone.app", @(gAppPhone)],
-                      @[@"com.notpreston.volta.calculator", @"/var/jb/Applications/VoltaCalc.app", @(gAppCalc)]];
+                      @[@"com.notpreston.volta.calculator", @"/var/jb/Applications/VoltaCalc.app", @(gAppCalc)],
+                      @[@"com.notpreston.volta.tweaks", @"/var/jb/Applications/Voltweaks.app", @(gAppTweaks)]];
     for (NSArray *app in apps) {
         NSString *bundleID = app[0], *path = app[1];
         BOOL wanted = [app[2] boolValue];

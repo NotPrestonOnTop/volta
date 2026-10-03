@@ -5,9 +5,17 @@ DIR="/var/jb/Library/Application Support/Volta"
 mkdir -p "$DIR"
 chown mobile:mobile "$DIR" 2>/dev/null || chown 501:501 "$DIR" 2>/dev/null
 chmod 755 "$DIR"
-# Put the Phone and Calculator apps on the Home Screen.
+# Voltweaks switches tweaks on and off by renaming files in the tweak folder,
+# which belongs to root. Its helper does that one step, so it runs as root.
+HELPER="/var/jb/usr/libexec/voltweaks-helper"
+if [ -f "$HELPER" ]; then
+    chown root:wheel "$HELPER" 2>/dev/null || chown 0:0 "$HELPER" 2>/dev/null
+    chmod 4755 "$HELPER"
+fi
+# Put the apps on the Home Screen.
 if command -v uicache >/dev/null 2>&1; then
     uicache -p /var/jb/Applications/VoltaPhone.app 2>/dev/null
     uicache -p /var/jb/Applications/VoltaCalc.app 2>/dev/null
+    uicache -p /var/jb/Applications/Voltweaks.app 2>/dev/null
 fi
 exit 0

@@ -19,8 +19,8 @@ VoltaHome_FILES = Home.x Layout.x Lock.x LockLook.x Icons.x Notify.x Fun.x VLTSc
 VoltaHome_CFLAGS = -fobjc-arc
 VoltaHome_FRAMEWORKS = UIKit QuartzCore AVFoundation CoreMedia CoreMotion AudioToolbox
 
-# The Settings pane, and two small iPad apps (Phone, Calculator)
-SUBPROJECTS += voltaprefs voltaphone voltacalc
+# The Settings pane, the apps (Phone, Calculator, Voltweaks) and Voltweaks's root helper
+SUBPROJECTS += voltaprefs voltaphone voltacalc voltweaks voltweakshelper
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 include $(THEOS_MAKE_PATH)/aggregate.mk
