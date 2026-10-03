@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Restyles the cards in the App Switcher (double-press the Home button, or swipe up and hold).</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>swOn</string>
+			<key>label</key>
+			<string>Customize App Switcher</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Bigger numbers are rounder; 0 is square.</string>
+			<key>label</key>
+			<string>Corners</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>swRadiusOn</string>
+			<key>label</key>
+			<string>Custom Card Corners</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>default</key>
+			<integer>40</integer>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>isSegmented</key>
+			<true/>
+			<key>key</key>
+			<string>swRadius</string>
+			<key>max</key>
+			<integer>160</integer>
+			<key>min</key>
+			<integer>0</integer>
+			<key>segmentCount</key>
+			<integer>16</integer>
+			<key>showValue</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Border</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>action</key>
+			<string>pickColor:</string>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>cellClass</key>
+			<string>VLTColorCell</string>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>swBorder</string>
+			<key>label</key>
+			<string>Border Color</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>default</key>
+			<integer>0</integer>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>isSegmented</key>
+			<true/>
+			<key>key</key>
+			<string>swBorderWidth</string>
+			<key>max</key>
+			<integer>16</integer>
+			<key>min</key>
+			<integer>0</integer>
+			<key>segmentCount</key>
+			<integer>16</integer>
+			<key>showValue</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Hide</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>swHideHeader</string>
+			<key>label</key>
+			<string>App Name and Icon Above Cards</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Looking for wobbly, spinning or tiny cards? Those are on the Fun page.</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>App Switcher</string>
+</dict>
+</plist>

@@ -24,6 +24,10 @@
 - (_UIStatusBarStringView *)dateView;
 @end
 
+@interface _UIStatusBar : UIView
+- (UIColor *)foregroundColor;
+@end
+
 @interface _UIStatusBarCellularItem : NSObject
 - (_UIStatusBarStringView *)serviceNameView;
 @end
@@ -45,6 +49,9 @@ static uint32_t gHide;
 static NSInteger gCutout;           // 0 none, 1 notch, 2 Dynamic Island
 static CGFloat gCutWidth = 160, gCutHeight = 30, gCutTop = 6;
 static BOOL gCutCharge = YES, gCutLens = YES, gHomeBar;
+static BOOL gSigOn;
+static NSInteger gSigBars = 4;      // 0 ... 4
+static NSString *gSigType, *gSigCarrier;
 static BOOL gReplaying;
 
 static void VLTLoadStatus(void) {
@@ -78,6 +85,14 @@ static void VLTLoadStatus(void) {
     gCutCharge = VLTBool(s, @"fakeCharge", YES);
     gCutLens   = VLTBool(s, @"fakeLens", YES);
     gHomeBar   = gOn && VLTBool(s, @"fakeHomeBar", NO);
+
+    gSigOn = gOn && VLTBool(s, @"sigOn", NO);
+    gSigBars = (NSInteger)fmin(fmax(VLTNum(s, @"sigBars", 4), 0), 4);
+    NSArray *types = @[@"5G", @"5G+", @"5G UW", @"5G UC", @"LTE", @"4G", @"3G", @"E", @""];
+    NSInteger type = (NSInteger)VLTNum(s, @"sigType", 0);
+    gSigType = types[(type >= 0 && type < (NSInteger)types.count) ? type : 0];
+    NSString *sigCarrier = VLTStr(s, @"sigCarrier");
+    gSigCarrier = sigCarrier.length > 20 ? [sigCarrier substringToIndex:20] : sigCarrier;
 }
 
 #pragma mark - Clock, date and carrier text
@@ -362,6 +377,144 @@ void VLTIslandAnnounce(NSString *text) {
     }
 }
 
+#pragma mark - Fake cellular signal
+
+// Signal bars and "5G" for devices with no cellular at all. Drawn as a small
+// view of its own, placed just left of the real items on the right-hand side.
+@interface VLTSignalView : UIView
+@property (nonatomic, strong) UIColor *ink;
+- (CGSize)wantedSize;
+@end
+
+@implementation VLTSignalView
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    if ((self = [super initWithFrame:frame])) {
+        self.userInteractionEnabled = NO;
+        self.backgroundColor = [UIColor clearColor];
+        self.contentMode = UIViewContentModeRedraw;
+        _ink = [UIColor whiteColor];
+    }
+    return self;
+}
+
+- (NSDictionary *)textAttributes {
+    return @{NSFontAttributeName: [UIFont systemFontOfSize:12 weight:UIFontWeightSemibold], NSForegroundColorAttributeName: self.ink ?: [UIColor whiteColor]};
+}
+
+- (CGSize)wantedSize {
+    CGFloat width = 17;   // four bars
+    if (gSigCarrier.length) width += ceil([gSigCarrier sizeWithAttributes:[self textAttributes]].width) + 5;
+    if (gSigType.length) width += ceil([gSigType sizeWithAttributes:[self textAttributes]].width) + 4;
+    return CGSizeMake(width, 14);
+}
+
+- (void)setInk:(UIColor *)ink {
+    if ([_ink isEqual:ink]) return;
+    _ink = ink;
+    [self setNeedsDisplay];
+}
+
+- (void)drawRect:(CGRect)rect {
+    NSDictionary *attributes = [self textAttributes];
+    UIColor *ink = self.ink ?: [UIColor whiteColor];
+    CGFloat x = 0, height = self.bounds.size.height;
+    if (gSigCarrier.length) {
+        CGSize size = [gSigCarrier sizeWithAttributes:attributes];
+        [gSigCarrier drawAtPoint:CGPointMake(x, (height - size.height) / 2) withAttributes:attributes];
+        x += ceil(size.width) + 5;
+    }
+    for (int i = 0; i < 4; i++) {
+        CGFloat barHeight = 4 + i * 2.2;
+        [(i < gSigBars ? ink : [ink colorWithAlphaComponent:0.3 * CGColorGetAlpha(ink.CGColor)]) setFill];
+        [[UIBezierPath bezierPathWithRoundedRect:CGRectMake(x + i * 4.5, height - 2 - barHeight, 3, barHeight) cornerRadius:1] fill];
+    }
+    x += 17 + 4;
+    if (gSigType.length) {
+        CGSize size = [gSigType sizeWithAttributes:attributes];
+        [gSigType drawAtPoint:CGPointMake(x, (height - size.height) / 2) withAttributes:attributes];
+    }
+}
+
+@end
+
+static const void *kSignalKey = &kSignalKey;
+
+// Whether a class is one of the things a status bar shows (a label, the Wi-Fi
+// fan, the battery...). Asked for every view on every layout, so the answer is
+// remembered per class.
+static BOOL VLTIsItemClass(Class cls, NSString *unused) {
+    static NSMapTable *verdicts;
+    if (!verdicts) verdicts = [NSMapTable mapTableWithKeyOptions:NSPointerFunctionsOpaqueMemory | NSPointerFunctionsOpaquePersonality
+                                                    valueOptions:NSPointerFunctionsStrongMemory];
+    NSNumber *known = [verdicts objectForKey:cls];
+    if (known) return known.boolValue;
+    NSString *name = NSStringFromClass(cls);
+    BOOL item = [name containsString:@"StringView"] || [name containsString:@"SignalView"] || [name containsString:@"BatteryView"] ||
+                [name containsString:@"ImageView"] || [name containsString:@"ActivityView"];
+    [verdicts setObject:@(item) forKey:cls];
+    return item;
+}
+
+// Finds the real items drawn on the right half of the bar (Wi-Fi, battery,
+// percentage...) so the fake signal can sit to their left.
+static void VLTCollectItems(UIView *view, UIView *bar, UIView *skip, int depth, CGFloat *minX, CGFloat *midY, UIColor **ink) {
+    if (depth > 8 || view == skip || view.hidden || view.alpha < 0.02) return;
+    NSString *name = nil;
+    BOOL item = VLTIsItemClass([view class], name);
+    if (item && view != bar) {
+        CGRect frame = [view convertRect:view.bounds toView:bar];
+        if (frame.size.width > 1 && frame.size.height > 1 && CGRectGetMidX(frame) > bar.bounds.size.width * 0.55) {
+            if (frame.origin.x < *minX) {
+                *minX = frame.origin.x;
+                *midY = CGRectGetMidY(frame);
+            }
+            if (!*ink && [view isKindOfClass:[UILabel class]] && [(UILabel *)view textColor]) *ink = [(UILabel *)view textColor];
+        }
+        return;
+    }
+    for (UIView *subview in view.subviews) VLTCollectItems(subview, bar, skip, depth + 1, minX, midY, ink);
+}
+
+static void VLTApplySignal(UIView *bar) {
+    VLTSignalView *signal = objc_getAssociatedObject(bar, kSignalKey);
+    BOOL wanted = gSigOn && bar.window && bar.bounds.size.width > 300;
+    if (!wanted) {
+        if (signal) {
+            [signal removeFromSuperview];
+            objc_setAssociatedObject(bar, kSignalKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        return;
+    }
+    if (!signal) {
+        signal = [[VLTSignalView alloc] initWithFrame:CGRectZero];
+        objc_setAssociatedObject(bar, kSignalKey, signal, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (signal.superview != bar) [bar addSubview:signal];
+
+    // The bar lays its items out after itself; ask for that now so their places are current.
+    for (UIView *subview in bar.subviews) if (subview != signal) [subview layoutIfNeeded];
+    CGFloat minX = CGFLOAT_MAX, midY = bar.bounds.size.height / 2;
+    UIColor *ink = nil;
+    VLTCollectItems(bar, bar, signal, 0, &minX, &midY, &ink);
+    // Nothing on the right (the left half of Split View, say): no signal there either.
+    signal.hidden = minX == CGFLOAT_MAX || !isfinite(minX) || !isfinite(midY);
+    if (signal.hidden) return;
+    if (!ink) {   // no label on that side: borrow the clock's color
+        for (_UIStatusBarStringView *view in VLTTextViews().allObjects) {
+            if ([view isDescendantOfView:bar] && view.textColor) { ink = view.textColor; break; }
+        }
+    }
+    if (!ink && [bar respondsToSelector:@selector(foregroundColor)]) ink = [(_UIStatusBar *)bar foregroundColor];
+    signal.ink = [ink isKindOfClass:[UIColor class]] ? ink : (bar.tintColor ?: [UIColor whiteColor]);
+    CGSize size = [signal wantedSize];
+    CGRect frame = CGRectMake(floor(minX - 7 - size.width), round(midY - size.height / 2), size.width, size.height);
+    if (!CGRectEqualToRect(signal.frame, frame)) {
+        signal.frame = frame;
+        [signal setNeedsDisplay];
+    }
+}
+
 #pragma mark - Hooks
 
 %group StatusLook
@@ -418,9 +571,16 @@ void VLTIslandAnnounce(NSString *text) {
     VLTApplyCutout((UIView *)self);
 }
 
+// Items come and go without the bar itself laying out; follow them.
+- (void)_updateWithAggregatedData:(id)data {
+    %orig;
+    if (gSigOn) [(UIView *)self setNeedsLayout];
+}
+
 - (void)layoutSubviews {
     %orig;
     if (gCutout != 0 || gHomeBar) VLTApplyCutout((UIView *)self);
+    if (gSigOn || objc_getAssociatedObject(self, kSignalKey)) VLTApplySignal((UIView *)self);
 }
 
 %end
@@ -433,6 +593,8 @@ static void VLTStatusRefresh(void) {
     VLTReplayText(0);
     for (UIView *bar in VLTBars().allObjects) {
         VLTApplyCutout(bar);
+        VLTApplySignal(bar);
+        [(UIView *)objc_getAssociatedObject(bar, kSignalKey) setNeedsDisplay];
         [bar setNeedsLayout];
     }
     // Cutouts whose status bar has since moved to another window.

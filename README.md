@@ -16,6 +16,7 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 - Clock: seconds, 24-hour, weekday, date, or your own format
 - Date (iPad): replace it with any text, or hide it; custom carrier name on cellular devices
 - Hide single items: Wi-Fi, cellular, location, Focus, rotation lock, alarm, airplane mode, VPN, headphones
+- Fake cellular: signal bars, a network type (5G, LTE...) and a carrier name for an iPad with no cellular
 - Fake hardware: an iPhone-style notch or Dynamic Island at the top of the screen (the island stretches to show the charge when you plug in), and a fake home bar. Pictures only; touches pass through
 
 **Home Screen**
@@ -26,6 +27,16 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 - Shapes: circle, hexagon, octagon, leaf, star, heart, diamond
 - Tints: colorize, wash, grayscale, invert, with a strength slider
 - Icon packs: import a .zip of PNGs named by bundle id, or give one app a picture from Photos
+
+**App Switcher**
+- Card corner radius, a border, and hiding the app name and icon above each card
+
+**Keyboard** (in every app)
+- Always dark or always light keys, a color wash behind the keys, or a rainbow that cycles
+
+**Volume & Charging**
+- A custom volume indicator (pill, slim bar or side bar) in your color, optionally for brightness too
+- A full-screen charging animation when you plug in: ring, battery filling up, or lightning bolt
 
 **Notifications**
 - Tint color and strength, corner radius, border, remove the blur
@@ -42,6 +53,10 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 **Apps for iPad** (installed with the tweak, shown on the Home Screen)
 - Phone: keypad with touch tones, favorites and recents. It cannot place cellular calls; "calling" ends by offering FaceTime Audio
 - Calculator: a working four-function calculator
+- Weather: real current conditions, the next 24 hours and a 7-day forecast for a city you pick (data from Open-Meteo)
+- Compass: a working compass with a bubble level
+- Voice Memos: record, play back, rename, share and delete recordings
+- Wallet: a card and pass holder for looks, with QR passes. It cannot pay, and never asks for a full card number
 - **Voltweaks**: a tweak manager. Lists every tweak the jailbreak loads, with the package it came from, its version and author, and what it loads into; switch any tweak off or on (takes effect after a respring, nothing is deleted), turn everything off at once to hunt down a misbehaving tweak, search, and respring from the app
 - Each app has an on/off switch on the main Volta page
 
@@ -65,6 +80,7 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 - One-tap style presets: Glass, Neon, Midnight, Sunset
 
 **Lock Screen**
+- Widgets under the clock: weather (from the city chosen in the Weather app), battery, a greeting, week and day of the year, and a countdown to a date
 - Clock: typeface (rounded, serif, monospaced, heavy, ultra light), color, size and position; a message under the clock; hide the date, the "Press Home" text, page dots, and the flashlight / camera buttons and padlock on Face ID devices
 - Unlock gesture: a classic slide-to-unlock slider (your own text and knob color), swipe up from the bottom edge, or both; it requests a normal unlock, so a passcode is still asked for
 
@@ -84,7 +100,7 @@ Everything is visual only. The real battery level and system behaviour are untou
 
 ## Install
 
-Download [`com.notpreston.volta_2.1.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.1.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
+Download [`com.notpreston.volta_2.2.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.2.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
 For rootless jailbreaks (Dopamine, palera1n rootless) on iOS 15 – 17.
 Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader.
 
@@ -100,6 +116,9 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     Icons.x              hooks: Home Screen layout and icon themes (SpringBoard only)
     LockLook.x           hooks: Lock Screen clock, message and hidden bits (SpringBoard only)
     Notify.x             hooks: notification styling (SpringBoard only)
+    Switcher.x           hooks: App Switcher cards (SpringBoard only)
+    Popups.x             the volume / brightness indicator and the charging animation (SpringBoard only)
+    Keyboard.x           hooks: keyboard appearance and color (all apps)
     VLTIconTheme.h       icon shapes and tints; shared with the Settings preview
     VLTLook.h            small helpers shared by the look-and-feel hooks
     Home.x               hooks: dock and animated wallpaper (SpringBoard only, separate library)
@@ -114,6 +133,10 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     layout/              install script and the folder the custom picture is shared from
     voltaphone/          the Phone app
     voltacalc/           the Calculator app; CalcCore.h is its arithmetic, testable on its own
+    voltaweather/        the Weather app; also writes weather.plist for the Lock Screen widget
+    voltacompass/        the Compass app
+    voltamemos/          the Voice Memos app
+    voltawallet/         the Wallet app
     voltweaks/           the Voltweaks app (tweak manager)
     voltweakshelper/     the small set-uid tool Voltweaks uses to rename a tweak's file; it only ever renames
                          <Name>.dylib <-> <Name>.disabled inside the tweak folder
@@ -149,7 +172,7 @@ This repository hosts one; paste this link into About > Update link:
 For a new version: add the new .deb to `releases/`, then change `version`, `notes` and `url` in
 [`updates.json`](updates.json). The file looks like this:
 
-    { "version": "2.1.0", "notes": "What changed", "url": "https://where-to-download" }
+    { "version": "2.2.0", "notes": "What changed", "url": "https://where-to-download" }
 
 Volta checks it once a day and compares `version` with its own. When you release a new
 build, bump `Version` in `control` and `VLT_VERSION` in `VLTShared.h`, then update the file.

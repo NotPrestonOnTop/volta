@@ -165,11 +165,11 @@ static NSArray<NSString *> *VLTFunKeys(void) {
 static NSArray<NSNumber *> *VLTGroupPages(NSInteger group) {
     switch (group) {
         case VLTGroupStatus: return @[@(VLTPageBattery), @(VLTPageStatus)];
-        case VLTGroupHome:   return @[@(VLTPageHome), @(VLTPageIcons), @(VLTPageDock), @(VLTPageWallpaper)];
-        case VLTGroupLock:   return @[@(VLTPageLock), @(VLTPageNotif)];
+        case VLTGroupHome:   return @[@(VLTPageHome), @(VLTPageIcons), @(VLTPageDock), @(VLTPageSwitcher), @(VLTPageWallpaper)];
+        case VLTGroupLock:   return @[@(VLTPageLock), @(VLTPageNotif), @(VLTPagePopups)];
         case VLTGroupCC:     return @[@(VLTPageCC)];
         case VLTGroupFun:    return @[@(VLTPageFun)];
-        case VLTGroupMore:   return @[@(VLTPageProfiles), @(VLTPageAbout)];
+        case VLTGroupMore:   return @[@(VLTPageKeyboard), @(VLTPageProfiles), @(VLTPageAbout)];
         default:             return @[];
     }
 }
@@ -206,6 +206,14 @@ static NSString *VLTPageStatusText(VLTPage page, NSDictionary *p, BOOL *inUse) {
         case VLTPageHome:  used = on && VLTBool(p, @"homeOn", NO);      text = @"On"; break;
         case VLTPageDock:  used = on && VLTBool(p, @"dockEnabled", YES); text = @"On"; break;
         case VLTPageNotif: used = on && VLTBool(p, @"notifOn", NO);     text = @"On"; break;
+        case VLTPageSwitcher: used = on && VLTBool(p, @"swOn", NO);     text = @"On"; break;
+        case VLTPageKeyboard: used = on && VLTBool(p, @"kbOn", NO);     text = @"On"; break;
+        case VLTPagePopups: {
+            BOOL hud = VLTBool(p, @"hudOn", NO), charge = VLTBool(p, @"chargeOn", NO);
+            text = (hud && charge) ? @"Volume and charging" : (hud ? @"Volume indicator" : @"Charging animation");
+            used = on && (hud || charge);
+            break;
+        }
         case VLTPageIcons: {
             NSArray *shapes = @[@"Themed", @"Circle", @"Hexagon", @"Octagon", @"Leaf", @"Star", @"Heart", @"Diamond"];
             NSInteger shape = (NSInteger)VLTNum(p, @"iconShape", 0);
@@ -370,6 +378,8 @@ static NSString *VLTGroupStatusText(NSInteger group, NSDictionary *p) {
         @(VLTPageIcons): [VLTIconsController class], @(VLTPageDock): [VLTDockController class],
         @(VLTPageWallpaper): [VLTWallpaperController class], @(VLTPageLock): [VLTLockController class],
         @(VLTPageNotif): [VLTNotifController class], @(VLTPageFun): [VLTFunController class],
+        @(VLTPageSwitcher): [VLTSwitcherController class], @(VLTPageKeyboard): [VLTKeyboardController class],
+        @(VLTPagePopups): [VLTPopupsController class],
     };
     Class pageClass = pages[@(index)];
     if (!pageClass) return;

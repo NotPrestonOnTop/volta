@@ -1,5 +1,5 @@
 {
-  "version": "2.1.0",
-  "notes": "New Voltweaks app: a tweak manager that lists your tweaks and switches them on and off. The Volta dashboard is tidied into six cards with sub-pages.",
-  "url": "https://github.com/NotPrestonOnTop/volta/raw/main/releases/com.notpreston.volta_2.1.0_iphoneos-arm64.deb"
+  "version": "2.2.0",
+  "notes": "Four new apps (Weather, Compass, Voice Memos, Wallet), Lock Screen widgets, a custom volume indicator, a charging animation, fake 5G and signal bars, keyboard colors, and App Switcher styling.",
+  "url": "https://github.com/NotPrestonOnTop/volta/raw/main/releases/com.notpreston.volta_2.2.0_iphoneos-arm64.deb"
 }

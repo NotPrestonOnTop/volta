@@ -282,6 +282,114 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
+			<string>Adds signal bars and a network type next to Wi-Fi, for an iPad with no cellular. It is only a picture.</string>
+			<key>label</key>
+			<string>Fake Cellular</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>sigOn</string>
+			<key>label</key>
+			<string>Fake Signal</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSLinkListCell</string>
+			<key>default</key>
+			<integer>0</integer>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>detail</key>
+			<string>PSListItemsController</string>
+			<key>key</key>
+			<string>sigType</string>
+			<key>label</key>
+			<string>Network</string>
+			<key>validTitles</key>
+			<array>
+				<string>5G</string>
+				<string>5G+</string>
+				<string>5G UW</string>
+				<string>5G UC</string>
+				<string>LTE</string>
+				<string>4G</string>
+				<string>3G</string>
+				<string>E</string>
+				<string>None</string>
+			</array>
+			<key>validValues</key>
+			<array>
+				<integer>0</integer>
+				<integer>1</integer>
+				<integer>2</integer>
+				<integer>3</integer>
+				<integer>4</integer>
+				<integer>5</integer>
+				<integer>6</integer>
+				<integer>7</integer>
+				<integer>8</integer>
+			</array>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>default</key>
+			<string></string>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>sigCarrier</string>
+			<key>label</key>
+			<string>Carrier Name</string>
+			<key>noAutoCorrect</key>
+			<true/>
+			<key>placeholder</key>
+			<string>Volta</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Signal Bars</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>default</key>
+			<integer>4</integer>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>isSegmented</key>
+			<true/>
+			<key>key</key>
+			<string>sigBars</string>
+			<key>max</key>
+			<integer>4</integer>
+			<key>min</key>
+			<integer>0</integer>
+			<key>segmentCount</key>
+			<integer>4</integer>
+			<key>showValue</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
 			<string>Draws an iPhone-style notch or Dynamic Island at the top of the screen, in every app. It is only a picture: touches go straight through it.</string>
 			<key>label</key>
 			<string>Fake Hardware</string>

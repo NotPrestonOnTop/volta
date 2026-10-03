@@ -43,7 +43,7 @@ static CGFloat gBounce = 0.55, gPull = 1.4;
 // Elsewhere
 static BOOL gConfetti, gFortune, gWobbleCC, gDizzyClock;
 static NSInteger gNames;        // 0 off, 1 backwards, 2 sPoNgE, 3 everything is Bob (read once, at launch)
-static BOOL gAppPhone = YES, gAppCalc = YES, gAppTweaks = YES;
+static BOOL gAppPhone = YES, gAppCalc = YES, gAppTweaks = YES, gAppWeather = YES, gAppCompass = YES, gAppMemos = YES, gAppWallet = YES;
 static BOOL gLocked;            // screen is locked: the busy effects take a break
 static BOOL gExplodeArmed;      // set from Settings; goes off on the next Home Screen touch
 
@@ -72,6 +72,10 @@ static void VLTLoadFunPrefs(void) {
     gAppPhone = VLTBool(p, @"appPhone", YES);
     gAppCalc  = VLTBool(p, @"appCalc", YES);
     gAppTweaks = VLTBool(p, @"appTweaks", YES);
+    gAppWeather = VLTBool(p, @"appWeather", YES);
+    gAppCompass = VLTBool(p, @"appCompass", YES);
+    gAppMemos = VLTBool(p, @"appMemos", YES);
+    gAppWallet = VLTBool(p, @"appWallet", YES);
 }
 
 static inline BOOL VLTCalm(void) { return UIAccessibilityIsReduceMotionEnabled(); }
@@ -1111,7 +1115,11 @@ static void VLTSyncApps(void) {
     if (!attempted) attempted = [NSMutableSet set];
     NSArray *apps = @[@[@"com.notpreston.volta.phone", @"/var/jb/Applications/VoltaPhone.app", @(gAppPhone)],
                       @[@"com.notpreston.volta.calculator", @"/var/jb/Applications/VoltaCalc.app", @(gAppCalc)],
-                      @[@"com.notpreston.volta.tweaks", @"/var/jb/Applications/Voltweaks.app", @(gAppTweaks)]];
+                      @[@"com.notpreston.volta.tweaks", @"/var/jb/Applications/Voltweaks.app", @(gAppTweaks)],
+                      @[@"com.notpreston.volta.weather", @"/var/jb/Applications/VoltaWeather.app", @(gAppWeather)],
+                      @[@"com.notpreston.volta.compass", @"/var/jb/Applications/VoltaCompass.app", @(gAppCompass)],
+                      @[@"com.notpreston.volta.memos", @"/var/jb/Applications/VoltaMemos.app", @(gAppMemos)],
+                      @[@"com.notpreston.volta.wallet", @"/var/jb/Applications/VoltaWallet.app", @(gAppWallet)]];
     for (NSArray *app in apps) {
         NSString *bundleID = app[0], *path = app[1];
         BOOL wanted = [app[2] boolValue];

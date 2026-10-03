@@ -13,6 +13,16 @@
 @interface VLTNotifController : VLTBaseController
 @end
 
+// Pages added in 2.2.
+@interface VLTSwitcherController : VLTBaseController
+@end
+
+@interface VLTKeyboardController : VLTBaseController
+@end
+
+@interface VLTPopupsController : VLTBaseController
+@end
+
 // Saved setups: not a settings list, a plain table.
 @interface VLTProfilesController : UITableViewController <UIDocumentPickerDelegate>
 @end

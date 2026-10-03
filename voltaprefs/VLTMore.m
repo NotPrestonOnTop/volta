@@ -296,6 +296,30 @@ static UIImage *VLTSampleIcon(NSString *symbol, UIColor *top, UIColor *bottom, C
 
 #pragma mark - Home Screen
 
+// Pages that are just a list of rows.
+@implementation VLTSwitcherController
+- (NSString *)plistName { return @"Switcher"; }
+@end
+
+@implementation VLTKeyboardController
+- (NSString *)plistName { return @"Keyboard"; }
+@end
+
+@implementation VLTPopupsController
+
+- (NSString *)plistName { return @"Popups"; }
+
+// SpringBoard draws these over Settings, so the preview is the real thing.
+- (void)previewHUD:(PSSpecifier *)specifier {
+    notify_post(VLT_DOMAIN "/previewHUD");
+}
+
+- (void)previewCharge:(PSSpecifier *)specifier {
+    notify_post(VLT_DOMAIN "/previewCharge");
+}
+
+@end
+
 @implementation VLTHomeController
 
 - (NSString *)plistName { return @"Home"; }
@@ -703,7 +727,8 @@ static void VLTPackChanged(NSString *folder) {
 // Not part of a look: the update checker's bookkeeping, which apps are shown,
 // and things only true of this device.
 static BOOL VLTProfileSkipsKey(NSString *key) {
-    return [key hasPrefix:@"update"] || [key isEqualToString:@"appPhone"] || [key isEqualToString:@"appCalc"] || [key isEqualToString:@"appTweaks"] ||
+    BOOL appSwitch = [key hasPrefix:@"app"] && key.length > 3 && [[NSCharacterSet uppercaseLetterCharacterSet] characterIsMember:[key characterAtIndex:3]];
+    return [key hasPrefix:@"update"] || appSwitch ||
            [key isEqualToString:@"iconDir"] || [key isEqualToString:@"ccModuleInfo"];   // facts about this device
 }
 

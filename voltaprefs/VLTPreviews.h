@@ -5,6 +5,7 @@
 typedef NS_ENUM(NSInteger, VLTPage) {
     VLTPageBattery = 0, VLTPageStatus, VLTPageCC, VLTPageHome, VLTPageIcons, VLTPageDock,
     VLTPageWallpaper, VLTPageLock, VLTPageNotif, VLTPageFun, VLTPageProfiles, VLTPageAbout,
+    VLTPageSwitcher, VLTPageKeyboard, VLTPagePopups,
 };
 
 // The six cards on the main page, in order. A card with several pages opens a

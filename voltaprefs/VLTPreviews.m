@@ -119,6 +119,9 @@ static const VLTPageLook kPageLooks[] = {
     { VLTPageFun,       "Fun",               "party.popper.fill",       0xF953C6, 0xB91D73 },
     { VLTPageProfiles,  "Profiles",          "square.stack.3d.up.fill", 0x8E8CF5, 0x5B4BD6 },
     { VLTPageAbout,     "About & Updates",   "heart.fill",              0xFF6482, 0xFF2D55 },
+    { VLTPageSwitcher,  "App Switcher",      "rectangle.stack.fill",    0x7D7AFF, 0x4B4BD8 },
+    { VLTPageKeyboard,  "Keyboard",          "keyboard.fill",           0x8E8E93, 0x5C5C63 },
+    { VLTPagePopups,    "Volume & Charging", "speaker.wave.2.fill",     0x30D158, 0x0FA36B },
 };
 
 static const VLTPageLook *VLTLookFor(VLTPage page) {
