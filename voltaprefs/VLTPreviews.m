@@ -123,6 +123,7 @@ static const VLTPageLook kPageLooks[] = {
     { VLTPageKeyboard,  "Keyboard",          "keyboard.fill",           0x8E8E93, 0x5C5C63 },
     { VLTPagePopups,    "Volume, Charging & Startup", "speaker.wave.2.fill", 0x30D158, 0x0FA36B },
     { VLTPageSounds,    "Sounds",            "music.note",              0xFF6FB5, 0xD9308A },
+    { VLTPageSafety,    "Safety",            "shield.fill",             0x34C759, 0x0A8F6B },
 };
 
 static const VLTPageLook *VLTLookFor(VLTPage page) {
@@ -169,6 +170,7 @@ static const CGFloat kBannerHeight = 130, kCardHeight = 116, kCardGap = 12;
             [[VLTCard alloc] initWithTitle:@"Lock & Alerts" symbol:@"lock.fill" from:HEX(0x40C8E0) to:HEX(0x0A84FF)],
             [[VLTCard alloc] initWithTitle:@"Control Center" symbol:@"switch.2" from:HEX(0x5B5BF0) to:HEX(0x19C8B9)],
             [[VLTCard alloc] initWithTitle:@"Fun" symbol:@"party.popper.fill" from:HEX(0xF953C6) to:HEX(0xB91D73)],
+            [[VLTCard alloc] initWithTitle:@"Safety" symbol:@"shield.fill" from:HEX(0x34C759) to:HEX(0x0A8F6B)],
             [[VLTCard alloc] initWithTitle:@"More" symbol:@"ellipsis" from:HEX(0x8E8CF5) to:HEX(0x5B4BD6)],
         ];
         NSInteger index = 0;

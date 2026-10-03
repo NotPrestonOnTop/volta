@@ -489,6 +489,7 @@ static UIImage *VTTile(NSString *title, CGFloat side, BOOL dimmed) {
 #pragma mark - List
 
 @interface VTListController : UITableViewController <UISearchResultsUpdating>
+- (void)showUpdates;
 @end
 
 @implementation VTListController {
@@ -525,8 +526,10 @@ static UIImage *VTTile(NSString *title, CGFloat side, BOOL dimmed) {
                                          handler:^(UIAction *action) { [weakSelf confirmAll:NO]; }];
     UIAction *allOn = [UIAction actionWithTitle:@"Turn All On" image:[UIImage systemImageNamed:@"bolt.fill"] identifier:nil
                                         handler:^(UIAction *action) { [weakSelf confirmAll:YES]; }];
+    UIAction *updates = [UIAction actionWithTitle:@"iOS Updates…" image:[UIImage systemImageNamed:@"shield.fill"] identifier:nil
+                                          handler:^(UIAction *action) { [weakSelf showUpdates]; }];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"ellipsis.circle"]
-                                                                               menu:[UIMenu menuWithTitle:@"" children:@[allOff, allOn]]];
+                                                                               menu:[UIMenu menuWithTitle:@"" children:@[allOff, allOn, updates]]];
     [self reload];
 }
 
@@ -713,6 +716,62 @@ static UIImage *VTTile(NSString *title, CGFloat side, BOOL dimmed) {
     if (failed) [self say:@"Some Tweaks Were Not Changed" message:firstProblem];
 }
 
+#pragma mark iOS updates
+
+// Runs one of the helper's update commands, as root if the system allows it
+// directly, otherwise through the helper's set-uid bit.
+static int VTRunUpdateCommand(NSString *command) {
+    int code = VTRunHelper(@[command], YES);
+    if (code == -1 || code == 3) code = VTRunHelper(@[command], NO);
+    return code;
+}
+
+// Volta's Safety page reads these to show the same state.
+static void VTRecordUpdates(BOOL wanted, int state) {
+    CFStringRef guard = CFSTR("com.notpreston.volta.guard"), volta = CFSTR("com.notpreston.volta");
+    CFPreferencesSetAppValue(CFSTR("otaWanted"), wanted ? kCFBooleanTrue : kCFBooleanFalse, guard);
+    CFPreferencesSetAppValue(CFSTR("otaState"), (__bridge CFPropertyListRef)@(state), guard);
+    CFPreferencesSetAppValue(CFSTR("otaChecked"), (__bridge CFPropertyListRef)[NSDate date], guard);
+    CFPreferencesAppSynchronize(guard);
+    CFPreferencesSetAppValue(CFSTR("safeBlockOTA"), wanted ? kCFBooleanTrue : kCFBooleanFalse, volta);
+    CFPreferencesAppSynchronize(volta);
+    notify_post("com.notpreston.volta/prefs");
+    notify_post("com.notpreston.volta/safety");
+}
+
+// Blocks or allows iOS software updates (the same switch as Volta's Safety page).
+- (void)showUpdates {
+    if (self.presentedViewController) return;
+    int status = VTRunUpdateCommand(@"ota-status");
+    NSString *message;
+    switch (status) {
+        case 0:  message = @"iOS updates are blocked. The iPad will not look for, download or install a new version of iOS."; break;
+        case 1:  message = @"iOS updates are allowed. An update would remove the jailbreak, and with it every tweak."; break;
+        case 3:  message = @"Voltweaks was not given root access on this jailbreak, so it cannot change this."; break;
+        case 6:  message = @"The jailbreak's launchctl tool was not found, so Voltweaks cannot change this."; break;
+        default: message = @"Voltweaks could not read whether updates are blocked."; break;
+    }
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"iOS Updates" message:message preferredStyle:UIAlertControllerStyleAlert];
+    __weak typeof(self) weakSelf = self;
+    void (^set)(BOOL) = ^(BOOL block) {
+        int code = VTRunUpdateCommand(block ? @"ota-block" : @"ota-allow");
+        int after = VTRunUpdateCommand(@"ota-status");
+        BOOL worked = code == 0 && after == (block ? 0 : 1);
+        // 1 blocked, 2 allowed, 3 no root, 4 no launchctl, 5 failed: the numbers Volta uses
+        VTRecordUpdates(block, worked ? (block ? 1 : 2) : (code == 3 ? 3 : (code == 6 ? 4 : 5)));
+        [weakSelf say:worked ? (block ? @"Updates Blocked" : @"Updates Allowed") : @"Couldn't Change Updates"
+              message:worked ? (block ? @"iOS will no longer update itself. If an update was already downloaded, delete it in Settings > General > iPad Storage."
+                                      : @"iOS can look for and install updates again.")
+                             : @"The change did not take. This jailbreak may not let Voltweaks switch system services."];
+    };
+    if (status == 0 || status == 1 || status == 5) {
+        if (status != 0) [alert addAction:[UIAlertAction actionWithTitle:@"Block Updates" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) { set(YES); }]];
+        if (status != 1) [alert addAction:[UIAlertAction actionWithTitle:@"Allow Updates" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) { set(NO); }]];
+    }
+    [alert addAction:[UIAlertAction actionWithTitle:@"Close" style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
 - (void)respring {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Respring Now?" message:@"The Home Screen restarts and your tweak changes take effect."
                                                             preferredStyle:UIAlertControllerStyleAlert];
@@ -729,13 +788,26 @@ static UIImage *VTTile(NSString *title, CGFloat side, BOOL dimmed) {
 @property (nonatomic, strong) UIWindow *window;
 @end
 
-@implementation VTAppDelegate
+@implementation VTAppDelegate {
+    VTListController *_list;
+}
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
     self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
     self.window.tintColor = VT_ACCENT;
-    self.window.rootViewController = [[UINavigationController alloc] initWithRootViewController:[[VTListController alloc] init]];
+    _list = [[VTListController alloc] init];
+    self.window.rootViewController = [[UINavigationController alloc] initWithRootViewController:_list];
     [self.window makeKeyAndVisible];
+    return YES;
+}
+
+// voltweaks://updates  (from Volta's Safety page)
+- (BOOL)application:(UIApplication *)application openURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
+    if (![url.scheme.lowercaseString isEqualToString:@"voltweaks"] || ![url.host.lowercaseString isEqualToString:@"updates"]) return NO;
+    [_list loadViewIfNeeded];
+    [_list.navigationController popToRootViewControllerAnimated:NO];
+    VTListController *list = _list;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [list showUpdates]; });
     return YES;
 }
 

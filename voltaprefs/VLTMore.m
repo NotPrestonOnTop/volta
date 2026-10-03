@@ -324,6 +324,110 @@ static UIImage *VLTSampleIcon(NSString *symbol, UIColor *top, UIColor *bottom, C
 
 @end
 
+#pragma mark - Safety
+
+static NSInteger VLTOtaState(void) {
+    NSNumber *state = VLTGuardGet(@"otaState");
+    return [state isKindOfClass:[NSNumber class]] ? state.integerValue : VLTOtaUnknown;
+}
+
+NSString *VLTSafetySummary(NSDictionary *prefs, BOOL *inUse) {
+    BOOL blocked = VLTBool(prefs, @"safeBlockOTA", NO) && VLTOtaState() == VLTOtaBlocked;
+    if (inUse) *inUse = YES;
+    if (VLTGuardTripped()) return @"Crash Guard turned Volta off";
+    if (blocked) return @"iOS updates blocked";
+    return VLTBool(prefs, @"safeGuard", YES) ? @"Crash Guard on" : @"Off";
+}
+
+@implementation VLTSafetyController
+
+- (NSString *)plistName { return @"Safety"; }
+
+static void VLTSafetyChanged(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef info) {
+    VLTSafetyController *controller = (__bridge VLTSafetyController *)observer;
+    dispatch_async(dispatch_get_main_queue(), ^{ [controller reloadSpecifiers]; });
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // SpringBoard (or Voltweaks) says when it has finished switching updates.
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self, VLTSafetyChanged,
+                                    CFSTR(VLT_NOTIFY_SAFETY), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
+}
+
+- (void)dealloc {
+    CFNotificationCenterRemoveObserver(CFNotificationCenterGetDarwinNotifyCenter(), (__bridge const void *)self, CFSTR(VLT_NOTIFY_SAFETY), NULL);
+}
+
+- (NSString *)updatesFooter {
+    NSString *about = @"An iOS update removes the jailbreak, and every tweak with it. This switches off the parts of iOS that look for, download and install updates.";
+    id setting = CFBridgingRelease(CFPreferencesCopyAppValue(CFSTR("safeBlockOTA"), CFSTR(VLT_DOMAIN)));
+    BOOL wanted = [setting isKindOfClass:[NSNumber class]] && [setting boolValue];
+    NSNumber *applied = VLTGuardGet(@"otaWanted");
+    BOOL pending = [applied isKindOfClass:[NSNumber class]] ? applied.boolValue != wanted : wanted;
+    NSString *now;
+    if (pending) {
+        now = @"Working on it… this line updates in a few seconds.";
+    } else {
+        switch (VLTOtaState()) {
+            case VLTOtaBlocked: now = @"Right now: updates are blocked, and Volta has checked that the block took."; break;
+            case VLTOtaAllowed: now = @"Right now: updates are allowed."; break;
+            case VLTOtaNoRoot:  now = @"Right now: Volta could not get the access it needs from here. Tap Check or Change in Voltweaks and do it there."; break;
+            case VLTOtaNoTool:  now = @"Right now: the jailbreak's launchctl tool was not found, so Volta cannot switch updates on this device."; break;
+            case VLTOtaFailed:  now = @"Right now: the change did not take. Try it from Voltweaks."; break;
+            default:            now = wanted ? @"Right now: not checked yet." : @"Right now: updates are allowed."; break;
+        }
+    }
+    return [NSString stringWithFormat:@"%@\n\n%@\n\nBlocking stops new downloads. If an update is already downloaded, delete it in Settings > General > iPad Storage. Removing Volta turns updates back on.", about, now];
+}
+
+- (NSString *)guardFooter {
+    NSString *about = @"If the Home Screen restarts four times within a minute, something is crashing it. Crash Guard then switches every Volta feature off so you can get back in and undo whatever you last changed.";
+    if (!VLTGuardTripped()) return about;
+    NSDate *when = VLTGuardGet(@"trippedAt");
+    NSString *time = [when isKindOfClass:[NSDate class]] ? [NSDateFormatter localizedStringFromDate:when dateStyle:NSDateFormatterMediumStyle timeStyle:NSDateFormatterShortStyle] : @"earlier";
+    return [NSString stringWithFormat:@"Crash Guard stepped in (%@) and Volta is switched off. Turn off whatever you changed last, then tap Turn Volta Back On.\n\n%@", time, about];
+}
+
+// The two group footers say what is true right now, so they are filled in here.
+- (NSArray *)specifiers {
+    NSArray *specifiers = [super specifiers];
+    for (PSSpecifier *specifier in specifiers) {
+        NSString *identifier = [specifier propertyForKey:@"id"];
+        if ([identifier isEqualToString:@"otaGroup"]) [specifier setProperty:[self updatesFooter] forKey:@"footerText"];
+        else if ([identifier isEqualToString:@"guardGroup"]) [specifier setProperty:[self guardFooter] forKey:@"footerText"];
+    }
+    return specifiers;
+}
+
+- (void)prefsDidChange {
+    // The switch was just flipped: show "working on it" until SpringBoard reports back.
+    __weak typeof(self) weakSelf = self;
+    dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf reloadSpecifiers]; });
+}
+
+- (void)openVoltweaks:(PSSpecifier *)specifier {
+    NSURL *url = [NSURL URLWithString:@"voltweaks://updates"];
+    __weak typeof(self) weakSelf = self;
+    [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:^(BOOL opened) {
+        if (!opened && weakSelf) VLTMoreAlert(weakSelf, @"Voltweaks Isn't Showing", @"Turn the Voltweaks app on from Volta's main page, then try again.");
+    }];
+}
+
+- (void)clearGuard:(PSSpecifier *)specifier {
+    if (!VLTGuardTripped()) {
+        VLTMoreAlert(self, @"Volta Is On", @"Crash Guard has not switched anything off.");
+        return;
+    }
+    VLTGuardSet(@"tripped", nil);
+    VLTGuardSet(@"trippedAt", nil);
+    VLTGuardSet(@"launches", @[]);
+    VLTMoreCommit();
+    [self reloadSpecifiers];
+}
+
+@end
+
 @implementation VLTSoundsController
 
 - (NSString *)plistName { return @"Sounds"; }
@@ -743,7 +847,9 @@ static void VLTPackChanged(NSString *folder) {
 // and things only true of this device.
 static BOOL VLTProfileSkipsKey(NSString *key) {
     BOOL appSwitch = [key hasPrefix:@"app"] && key.length > 3 && [[NSCharacterSet uppercaseLetterCharacterSet] characterIsMember:[key characterAtIndex:3]];
-    return [key hasPrefix:@"update"] || appSwitch ||
+    // Safety switches are about this device staying jailbroken, not about a look.
+    BOOL safety = [key hasPrefix:@"safe"] && key.length > 4 && [[NSCharacterSet uppercaseLetterCharacterSet] characterIsMember:[key characterAtIndex:4]];
+    return [key hasPrefix:@"update"] || appSwitch || safety ||
            [key isEqualToString:@"iconDir"] || [key isEqualToString:@"ccModuleInfo"];   // facts about this device
 }
 

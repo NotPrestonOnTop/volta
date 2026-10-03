@@ -1,6 +1,6 @@
 # Volta
 
-Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta** pane to Settings with a dashboard of six cards (Status Bar, Home Screen, Lock & Alerts, Control Center, Fun, More). A card with several pages opens a short list of them; most pages have a live preview:
+Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta** pane to Settings with a dashboard of seven cards (Status Bar, Home Screen, Lock & Alerts, Control Center, Fun, Safety, More). A card with several pages opens a short list of them; most pages have a live preview:
 
 **Battery** (status bar, in every app)
 - Animated pictures: add Pulse, Bounce, Wobble, Spin, Blink or Shake to any still picture, or build your own in the Animation Creator (draw 16 × 16 pixel frames, add photos, or import a GIF; up to 24 frames), with named save slots
@@ -38,6 +38,10 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 - A custom volume indicator (pill, slim bar or side bar) in your color, optionally for brightness too
 - A full-screen charging animation when you plug in: ring, battery filling up, or lightning bolt
 - A startup animation that plays over the Lock Screen after a restart or respring: Bolt Strike, Power Ring or Name Only, in your color, with your own name and an optional chime
+
+**Safety**
+- Block iOS Updates: switches off the parts of iOS that look for, download and install updates, so an update cannot remove the jailbreak; the page says whether the block actually took, and removing Volta turns updates back on
+- Crash Guard: if the Home Screen restarts four times within a minute, every Volta feature is switched off until you turn it back on
 
 **Sounds**
 - Volta's own sounds when the iPad locks, unlocks, is plugged in or unplugged, and an optional tick for volume presses; three packs (Chime, Arcade, Sci-Fi) made in code, with a loudness slider
@@ -106,7 +110,7 @@ Everything is visual only. The real battery level and system behaviour are untou
 
 ## Install
 
-Download [`com.notpreston.volta_2.5.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.5.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
+Download [`com.notpreston.volta_2.5.1_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.5.1_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
 For rootless jailbreaks (Dopamine, palera1n rootless) on iOS 15 – 17.
 Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader.
 
@@ -124,6 +128,7 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     Notify.x             hooks: notification styling (SpringBoard only)
     Switcher.x           hooks: App Switcher cards (SpringBoard only)
     Popups.x             the volume / brightness indicator, the charging animation, and the fake notch / Dynamic Island / home bar (SpringBoard only)
+    Safety.x             keeps iOS updates blocked through the root helper (SpringBoard only); Crash Guard is in VLTShared.h
     Sounds.x             system sounds (SpringBoard only); VLTSynth.h makes them and is tested on its own
     Keyboard.x           hooks: keyboard appearance and color (all apps)
     Share.x              hooks: the Save to Volta share-sheet button (all apps)
@@ -149,8 +154,9 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     voltadrive/          the Drive app (car dashboard)
     voltasaved/          the Saved app; SavedCore.h finds the video id in a link and is tested on its own
     voltweaks/           the Voltweaks app (tweak manager)
-    voltweakshelper/     the small set-uid tool Voltweaks uses to rename a tweak's file; it only ever renames
-                         <Name>.dylib <-> <Name>.disabled inside the tweak folder
+    voltweakshelper/     the small set-uid tool behind Voltweaks and the Safety page. It does two things and takes
+                         nothing else from its caller: rename <Name>.dylib <-> <Name>.disabled inside the tweak
+                         folder, and switch a fixed list of iOS update services off or on
     voltaprefs/          Settings pane
       VLTControllers.m   the pages, color picker, respring, reset
       VLTMore.m          Home Screen, Icons, Status Bar and Notifications pages; icon pack import; profiles
@@ -183,7 +189,7 @@ This repository hosts one; paste this link into About > Update link:
 For a new version: add the new .deb to `releases/`, then change `version`, `notes` and `url` in
 [`updates.json`](updates.json). The file looks like this:
 
-    { "version": "2.5.0", "notes": "What changed", "url": "https://where-to-download" }
+    { "version": "2.5.1", "notes": "What changed", "url": "https://where-to-download" }
 
 Volta checks it once a day and compares `version` with its own. When you release a new
 build, bump `Version` in `control` and `VLT_VERSION` in `VLTShared.h`, then update the file.

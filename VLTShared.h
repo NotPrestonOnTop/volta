@@ -18,7 +18,7 @@
 #define VLT_NOTIFY_PREFS    VLT_DOMAIN "/prefs"     // Settings -> SpringBoard: prefs changed
 #define VLT_NOTIFY_APPLY    VLT_DOMAIN "/apply"     // SpringBoard -> everyone: state republished
 #define VLT_NOTIFY_RESPRING VLT_DOMAIN "/respring"  // Settings -> SpringBoard
-#define VLT_VERSION         "2.5.0"   // keep in step with the "control" file
+#define VLT_VERSION         "2.5.1"   // keep in step with the "control" file
 #define VLT_STATE_VERSION   3
 
 // Custom battery picture. SpringBoard writes it here so that apps, which can
@@ -98,14 +98,79 @@ _Static_assert(sizeof(VLTState) == VLT_STATE_WORDS * sizeof(uint64_t), "VLTState
 
 #pragma mark - Preferences
 
+// Safety bookkeeping lives in its own small preferences file: whether Crash
+// Guard has switched Volta off, recent SpringBoard launches, and what the
+// iOS-update block last reported.
+#define VLT_GUARD_DOMAIN  "com.notpreston.volta.guard"
+#define VLT_NOTIFY_SAFETY VLT_DOMAIN "/safety"     // the Safety page should refresh
+enum { VLTOtaUnknown = 0, VLTOtaBlocked, VLTOtaAllowed, VLTOtaNoRoot, VLTOtaNoTool, VLTOtaFailed };
+
+static inline id VLTGuardGet(NSString *key) {
+    CFPreferencesAppSynchronize(CFSTR(VLT_GUARD_DOMAIN));
+    return CFBridgingRelease(CFPreferencesCopyAppValue((__bridge CFStringRef)key, CFSTR(VLT_GUARD_DOMAIN)));
+}
+
+static inline void VLTGuardSet(NSString *key, id value) {
+    CFPreferencesSetAppValue((__bridge CFStringRef)key, (__bridge CFPropertyListRef)value, CFSTR(VLT_GUARD_DOMAIN));
+    CFPreferencesAppSynchronize(CFSTR(VLT_GUARD_DOMAIN));
+}
+
+static inline BOOL VLTGuardTripped(void) {
+    id tripped = VLTGuardGet(@"tripped");
+    return [tripped isKindOfClass:[NSNumber class]] && [tripped boolValue];
+}
+
+// Crash Guard. Counted once per SpringBoard launch: four launches inside a
+// minute that Volta did not ask for means something keeps crashing the Home
+// Screen, so every Volta feature is switched off until the user turns it
+// back on from the Safety page.
+static inline void VLTGuardNoteLaunch(NSDictionary *prefs) {
+    static BOOL noted;
+    if (noted) return;
+    noted = YES;
+    if (![[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) return;
+    if (getenv("VLT_GUARD_NOTED")) return;   // Volta's other library in this process already counted it
+    setenv("VLT_GUARD_NOTED", "1", 1);
+
+    NSDate *expected = VLTGuardGet(@"expected");
+    if ([expected isKindOfClass:[NSDate class]] && fabs([expected timeIntervalSinceNow]) < 45) {
+        VLTGuardSet(@"expected", nil);    // a respring Volta itself asked for
+        VLTGuardSet(@"launches", @[]);
+        return;
+    }
+    NSMutableArray *recent = [NSMutableArray array];
+    NSArray *before = VLTGuardGet(@"launches");
+    for (id when in ([before isKindOfClass:[NSArray class]] ? before : @[])) {
+        if ([when isKindOfClass:[NSDate class]] && [when timeIntervalSinceNow] > -60 && [when timeIntervalSinceNow] <= 0) [recent addObject:when];
+    }
+    [recent addObject:[NSDate date]];
+    id guardOn = prefs[@"safeGuard"];
+    BOOL watching = ![guardOn isKindOfClass:[NSNumber class]] || [guardOn boolValue];   // on unless switched off
+    if (watching && recent.count >= 4 && !VLTGuardTripped()) {
+        VLTGuardSet(@"tripped", @YES);
+        VLTGuardSet(@"trippedAt", [NSDate date]);
+        [recent removeAllObjects];
+    }
+    VLTGuardSet(@"launches", recent);
+}
+
 static inline NSDictionary *VLTCopyPrefs(void) {
     CFStringRef app = CFSTR(VLT_DOMAIN);
     CFPreferencesAppSynchronize(app);
     CFArrayRef keys = CFPreferencesCopyKeyList(app, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
-    if (!keys) return @{};
-    NSDictionary *d = CFBridgingRelease(CFPreferencesCopyMultiple(keys, app, kCFPreferencesCurrentUser, kCFPreferencesAnyHost));
-    CFRelease(keys);
-    return d ?: @{};
+    NSDictionary *d = nil;
+    if (keys) {
+        d = CFBridgingRelease(CFPreferencesCopyMultiple(keys, app, kCFPreferencesCurrentUser, kCFPreferencesAnyHost));
+        CFRelease(keys);
+    }
+    if (!d) d = @{};
+    VLTGuardNoteLaunch(d);
+    if (VLTGuardTripped()) {   // Crash Guard: everything reads as "Volta is off"
+        NSMutableDictionary *off = [d mutableCopy];
+        off[@"enabled"] = @NO;
+        return off;
+    }
+    return d;
 }
 
 static inline BOOL VLTBool(NSDictionary *d, NSString *key, BOOL fallback) {

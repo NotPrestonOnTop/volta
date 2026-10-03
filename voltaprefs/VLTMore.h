@@ -26,6 +26,12 @@
 @interface VLTSoundsController : VLTBaseController
 @end
 
+@interface VLTSafetyController : VLTBaseController
+@end
+
+// One line for the Safety card and list row.
+NSString *VLTSafetySummary(NSDictionary *prefs, BOOL *inUse);
+
 // Saved setups: not a settings list, a plain table.
 @interface VLTProfilesController : UITableViewController <UIDocumentPickerDelegate>
 @end

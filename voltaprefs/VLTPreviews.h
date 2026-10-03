@@ -5,13 +5,13 @@
 typedef NS_ENUM(NSInteger, VLTPage) {
     VLTPageBattery = 0, VLTPageStatus, VLTPageCC, VLTPageHome, VLTPageIcons, VLTPageDock,
     VLTPageWallpaper, VLTPageLock, VLTPageNotif, VLTPageFun, VLTPageProfiles, VLTPageAbout,
-    VLTPageSwitcher, VLTPageKeyboard, VLTPagePopups, VLTPageSounds,
+    VLTPageSwitcher, VLTPageKeyboard, VLTPagePopups, VLTPageSounds, VLTPageSafety,
 };
 
-// The six cards on the main page, in order. A card with several pages opens a
+// The cards on the main page, in order. A card with several pages opens a
 // short list of them; a card with one page opens it directly.
 typedef NS_ENUM(NSInteger, VLTGroup) {
-    VLTGroupStatus = 0, VLTGroupHome, VLTGroupLock, VLTGroupCC, VLTGroupFun, VLTGroupMore, VLTGroupCount,
+    VLTGroupStatus = 0, VLTGroupHome, VLTGroupLock, VLTGroupCC, VLTGroupFun, VLTGroupSafety, VLTGroupMore, VLTGroupCount,
 };
 
 // How a page is shown in lists: its name, and a small gradient tile with its symbol.

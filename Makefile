@@ -15,7 +15,7 @@ Volta_FILES = Tweak.x Status.x Keyboard.x Share.x
 Volta_CFLAGS = -fobjc-arc
 Volta_FRAMEWORKS = UIKit QuartzCore
 
-VoltaHome_FILES = Home.x Layout.x Lock.x LockLook.x Icons.x Notify.x Switcher.x Popups.x Sounds.x Fun.x VLTScene.m VLTSlider.m
+VoltaHome_FILES = Home.x Layout.x Lock.x LockLook.x Icons.x Notify.x Switcher.x Popups.x Sounds.x Safety.x Fun.x VLTScene.m VLTSlider.m
 VoltaHome_CFLAGS = -fobjc-arc
 VoltaHome_FRAMEWORKS = UIKit QuartzCore AVFoundation CoreMedia CoreMotion AudioToolbox
 

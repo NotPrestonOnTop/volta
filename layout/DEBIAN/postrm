@@ -10,4 +10,16 @@ if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
         done
     fi
 fi
+# If Volta's Safety page had iOS updates blocked, put them back the way Apple ships them:
+# with Volta gone there would be no switch left to do it.
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    for CTL in /var/jb/usr/bin/launchctl /var/jb/bin/launchctl /bin/launchctl; do
+        if [ -x "$CTL" ]; then
+            for SERVICE in com.apple.mobile.softwareupdated com.apple.softwareupdateservicesd com.apple.OTATaskingAgent com.apple.mobile.NRDUpdated; do
+                "$CTL" enable "system/$SERVICE" 2>/dev/null
+            done
+            break
+        fi
+    done
+fi
 exit 0

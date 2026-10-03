@@ -169,13 +169,14 @@ static NSArray<NSNumber *> *VLTGroupPages(NSInteger group) {
         case VLTGroupLock:   return @[@(VLTPageLock), @(VLTPageNotif), @(VLTPagePopups)];
         case VLTGroupCC:     return @[@(VLTPageCC)];
         case VLTGroupFun:    return @[@(VLTPageFun)];
+        case VLTGroupSafety: return @[@(VLTPageSafety)];
         case VLTGroupMore:   return @[@(VLTPageKeyboard), @(VLTPageSounds), @(VLTPageProfiles), @(VLTPageAbout)];
         default:             return @[];
     }
 }
 
 static NSString *VLTGroupTitle(NSInteger group) {
-    NSArray *titles = @[@"Status Bar", @"Home Screen", @"Lock & Alerts", @"Control Center", @"Fun", @"More"];
+    NSArray *titles = @[@"Status Bar", @"Home Screen", @"Lock & Alerts", @"Control Center", @"Fun", @"Safety", @"More"];
     return (group >= 0 && group < (NSInteger)titles.count) ? titles[group] : @"";
 }
 
@@ -253,6 +254,8 @@ static NSString *VLTPageStatusText(VLTPage page, NSDictionary *p, BOOL *inUse) {
             used = on && count > 0;
             break;
         }
+        case VLTPageSafety:
+            return VLTSafetySummary(p, inUse);
         case VLTPageProfiles: {
             NSInteger count = VLTProfileCount();
             if (inUse) *inUse = count > 0;
@@ -390,6 +393,7 @@ static NSString *VLTGroupStatusText(NSInteger group, NSDictionary *p) {
         @(VLTPageNotif): [VLTNotifController class], @(VLTPageFun): [VLTFunController class],
         @(VLTPageSwitcher): [VLTSwitcherController class], @(VLTPageKeyboard): [VLTKeyboardController class],
         @(VLTPagePopups): [VLTPopupsController class], @(VLTPageSounds): [VLTSoundsController class],
+        @(VLTPageSafety): [VLTSafetyController class],
     };
     Class pageClass = pages[@(index)];
     if (!pageClass) return;
@@ -427,6 +431,8 @@ static NSString *VLTGroupStatusText(NSInteger group, NSDictionary *p) {
     __weak typeof(self) weakSelf = self;
     [alert addAction:[UIAlertAction actionWithTitle:@"Reset" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *action) {
         for (NSString *key in VLTCopyPrefs().allKeys) {
+            // The Safety switches stay as they are: a reset must not quietly let iOS updates back in.
+            if ([key isEqualToString:@"safeBlockOTA"] || [key isEqualToString:@"safeGuard"]) continue;
             CFPreferencesSetAppValue((__bridge CFStringRef)key, NULL, CFSTR(VLT_DOMAIN));
         }
         CFPreferencesAppSynchronize(CFSTR(VLT_DOMAIN));

@@ -927,6 +927,7 @@ static void VLTRefreshControlCenter(void) {
 #pragma mark - Settings plumbing
 
 static void VLTRespring(void) {
+    VLTGuardSet(@"expected", [NSDate date]);   // Crash Guard: this restart is on purpose
     Class actionClass = NSClassFromString(@"SBSRelaunchAction");
     Class serviceClass = NSClassFromString(@"FBSSystemService");
     SEL make = NSSelectorFromString(@"actionWithReason:options:targetURL:");
