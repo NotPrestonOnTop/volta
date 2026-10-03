@@ -1,6 +1,6 @@
 // Volta - things drawn over everything: a custom volume / brightness
-// indicator, a charging animation, and the fake notch / Dynamic Island / home
-// bar. SpringBoard only.
+// indicator, a charging animation, the startup animation, and the fake notch /
+// Dynamic Island / home bar. SpringBoard only.
 //
 // All of it is drawn in one window of Volta's own that takes no touches and
 // is hidden whenever nothing is showing.
@@ -8,7 +8,9 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 #import <notify.h>
+#import <AudioToolbox/AudioToolbox.h>
 #import "VLTShared.h"
+#import "VLTChime.h"
 
 #pragma mark - Settings
 
@@ -21,6 +23,10 @@ static UIColor *gChargeColor;
 static NSInteger gCutout;           // 0 none, 1 notch, 2 Dynamic Island
 static CGFloat gCutWidth = 160, gCutHeight = 30, gCutTop = 6;
 static BOOL gCutCharge = YES, gCutLens = YES, gHomeBar, gCutFixed;
+static BOOL gBootOn, gBootSound = YES;
+static NSInteger gBootStyle;        // 0 bolt strike, 1 power ring, 2 name only
+static UIColor *gBootColor;
+static NSString *gBootText;
 
 static void VLTLoadPopupPrefs(void) {
     NSDictionary *p = VLTCopyPrefs();
@@ -44,6 +50,13 @@ static void VLTLoadPopupPrefs(void) {
     gCutLens   = VLTBool(p, @"fakeLens", YES);
     gHomeBar   = on && VLTBool(p, @"fakeHomeBar", NO);
     gCutFixed  = VLTBool(p, @"fakeFixed", NO);
+    gBootOn = on && VLTBool(p, @"bootOn", NO);
+    gBootSound = VLTBool(p, @"bootSound", YES);
+    gBootStyle = (NSInteger)VLTNum(p, @"bootStyle", 0);
+    if (gBootStyle < 0 || gBootStyle > 2) gBootStyle = 0;
+    gBootColor = VLTColorFromHex(p[@"bootColor"]) ?: [UIColor colorWithRed:0.357 green:0.357 blue:0.941 alpha:1];
+    NSString *bootText = [VLTStr(p, @"bootText") stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    gBootText = bootText.length > 16 ? [bootText substringToIndex:16] : bootText;
 }
 
 #pragma mark - The window
@@ -97,6 +110,14 @@ static UIView *VLTPopupHost(void) {
         gWindow.rootViewController.view.userInteractionEnabled = NO;
         gWindow.rootViewController.view.accessibilityElementsHidden = YES;
         if ([gWindow respondsToSelector:@selector(_setSecure:)]) [gWindow _setSecure:YES];   // also shown over the Lock Screen
+    }
+    if (!gWindow.windowScene) {   // it was made before SpringBoard had a scene; join one now
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if ([scene isKindOfClass:[UIWindowScene class]]) {
+                gWindow.windowScene = (UIWindowScene *)scene;
+                break;
+            }
+        }
     }
     gWindow.hidden = NO;
     return gWindow.rootViewController.view;
@@ -665,6 +686,246 @@ static void VLTLayoutCutout(void) {
     [gCutoutView setNeedsLayout];
 }
 
+#pragma mark - Startup animation
+
+// Plays once each time SpringBoard starts (after a boot or a respring), over
+// the Lock Screen, then fades away. It can never get stuck: a second timer
+// removes it even if the animation's own ending does not run.
+@interface VLTBootView : UIView
+- (void)playWithCompletion:(void (^)(void))completion;
+@end
+
+@implementation VLTBootView {
+    UIView *_stage;
+    UILabel *_word;
+    CAGradientLayer *_glow;
+}
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    if ((self = [super initWithFrame:frame])) {
+        self.userInteractionEnabled = NO;
+        self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.backgroundColor = [UIColor blackColor];
+        _glow = [CAGradientLayer layer];
+        _glow.type = kCAGradientLayerRadial;
+        _glow.startPoint = CGPointMake(0.5, 0.5);
+        _glow.endPoint = CGPointMake(1, 1);
+        _glow.opacity = 0;
+        [self.layer addSublayer:_glow];
+        _stage = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 200, 200)];
+        [self addSubview:_stage];
+        _word = [[UILabel alloc] init];
+        _word.textAlignment = NSTextAlignmentCenter;
+        _word.textColor = [UIColor whiteColor];
+        _word.alpha = 0;
+        [self addSubview:_word];
+    }
+    return self;
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    CGSize size = self.bounds.size;
+    BOOL wordOnly = gBootStyle == 2;
+    CGPoint center = CGPointMake(size.width / 2, size.height / 2 - (wordOnly ? 0 : 36));
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    CGFloat side = MAX(size.width, size.height) * 1.1;
+    _glow.frame = CGRectMake(center.x - side / 2, center.y - side / 2, side, side);
+    [CATransaction commit];
+    _stage.center = center;
+    _word.frame = CGRectMake(20, wordOnly ? center.y - 30 : center.y + 118, size.width - 40, 60);
+}
+
+// The Volta bolt, in a 200 x 200 box.
+- (UIBezierPath *)boltPath {
+    UIBezierPath *path = [UIBezierPath bezierPath];
+    [path moveToPoint:CGPointMake(120, 6)];
+    [path addLineToPoint:CGPointMake(38, 116)];
+    [path addLineToPoint:CGPointMake(92, 116)];
+    [path addLineToPoint:CGPointMake(76, 194)];
+    [path addLineToPoint:CGPointMake(162, 80)];
+    [path addLineToPoint:CGPointMake(108, 80)];
+    [path closePath];
+    return path;
+}
+
+- (CABasicAnimation *)animate:(NSString *)keyPath from:(id)from to:(id)to duration:(CFTimeInterval)duration delay:(CFTimeInterval)delay {
+    CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:keyPath];
+    animation.fromValue = from;
+    animation.toValue = to;
+    animation.duration = duration;
+    animation.beginTime = CACurrentMediaTime() + delay;
+    animation.fillMode = kCAFillModeBackwards;   // hold the starting look until it begins
+    animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseOut];
+    return animation;
+}
+
+- (void)playWithCompletion:(void (^)(void))completion {
+    for (CALayer *layer in [_stage.layer.sublayers copy]) [layer removeFromSuperlayer];
+    BOOL moving = !UIAccessibilityIsReduceMotionEnabled();
+    UIColor *color = gBootColor;
+    _glow.colors = @[(id)[color colorWithAlphaComponent:0.38].CGColor, (id)[color colorWithAlphaComponent:0].CGColor];
+    NSString *text = gBootText.length ? gBootText : @"VOLTA";
+    _word.attributedText = [[NSAttributedString alloc] initWithString:text attributes:@{
+        NSFontAttributeName: [UIFont systemFontOfSize:gBootStyle == 2 ? 46 : 34 weight:UIFontWeightHeavy],
+        NSKernAttributeName: @(gBootStyle == 2 ? 14 : 10),
+        NSForegroundColorAttributeName: [UIColor whiteColor]}];
+    self.alpha = 1;
+    _word.alpha = 0;
+    _word.transform = CGAffineTransformIdentity;
+    [self setNeedsLayout];
+    [self layoutIfNeeded];
+
+    CFTimeInterval logoDone = 0.2;   // when the wordmark may come in
+    if (gBootStyle != 2) {
+        CAShapeLayer *bolt = [CAShapeLayer layer];
+        bolt.path = [self boltPath].CGPath;
+        bolt.fillColor = color.CGColor;
+        bolt.strokeColor = [UIColor whiteColor].CGColor;
+        bolt.lineWidth = 3;
+        bolt.lineJoin = kCALineJoinRound;
+        bolt.shadowColor = color.CGColor;
+        bolt.shadowOpacity = 0.95;
+        bolt.shadowRadius = 22;
+        bolt.shadowOffset = CGSizeZero;
+        bolt.frame = CGRectMake(0, 0, 200, 200);
+        [_stage.layer addSublayer:bolt];
+
+        if (moving && gBootStyle == 0) {
+            // Bolt Strike: the outline draws itself, then it fills with a flash and sparks.
+            [bolt addAnimation:[self animate:@"strokeEnd" from:@0 to:@1 duration:0.8 delay:0.15] forKey:@"draw"];
+            [bolt addAnimation:[self animate:@"fillColor" from:(id)[UIColor clearColor].CGColor to:(id)color.CGColor duration:0.25 delay:0.95] forKey:@"fill"];
+            [bolt addAnimation:[self animate:@"shadowOpacity" from:@0 to:@0.95 duration:0.3 delay:0.95] forKey:@"glow"];
+            CAKeyframeAnimation *thump = [CAKeyframeAnimation animationWithKeyPath:@"transform.scale"];
+            thump.values = @[@1, @1.16, @0.97, @1];
+            thump.keyTimes = @[@0, @0.35, @0.7, @1];
+            thump.duration = 0.45;
+            thump.beginTime = CACurrentMediaTime() + 0.95;
+            [bolt addAnimation:thump forKey:@"thump"];
+
+            CAEmitterLayer *sparks = [CAEmitterLayer layer];
+            sparks.emitterPosition = CGPointMake(100, 100);
+            sparks.emitterShape = kCAEmitterLayerCircle;
+            sparks.emitterSize = CGSizeMake(50, 50);
+            sparks.beginTime = CACurrentMediaTime() + 0.95;
+            CAEmitterCell *spark = [CAEmitterCell emitterCell];
+            spark.contents = (__bridge id)[[[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(8, 8)] imageWithActions:^(UIGraphicsImageRendererContext *context) {
+                [[UIColor whiteColor] setFill];
+                [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(0, 0, 8, 8)] fill];
+            }].CGImage;
+            spark.color = color.CGColor;
+            spark.birthRate = 110;
+            spark.lifetime = 0.9;
+            spark.velocity = 240;
+            spark.velocityRange = 110;
+            spark.emissionRange = 2 * M_PI;
+            spark.scale = 0.7;
+            spark.scaleSpeed = -0.6;
+            spark.alphaSpeed = -1.1;
+            sparks.emitterCells = @[spark];
+            [_stage.layer insertSublayer:sparks atIndex:0];
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.4 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ sparks.birthRate = 0; });
+            logoDone = 1.15;
+        } else if (moving) {
+            // Power Ring: a ring charges up around the bolt, then lets go.
+            CAShapeLayer *ring = [CAShapeLayer layer];
+            ring.path = [UIBezierPath bezierPathWithArcCenter:CGPointMake(100, 100) radius:128 startAngle:-M_PI_2 endAngle:M_PI * 1.5 clockwise:YES].CGPath;
+            ring.frame = CGRectMake(0, 0, 200, 200);
+            ring.fillColor = NULL;
+            ring.strokeColor = color.CGColor;
+            ring.lineWidth = 6;
+            ring.lineCap = kCALineCapRound;
+            ring.opacity = 0;
+            [_stage.layer insertSublayer:ring atIndex:0];
+            [bolt addAnimation:[self animate:@"opacity" from:@0 to:@1 duration:0.4 delay:0.1] forKey:@"appear"];
+            [bolt addAnimation:[self animate:@"transform.scale" from:@0.6 to:@1 duration:0.5 delay:0.1] forKey:@"grow"];
+            CABasicAnimation *charge = [self animate:@"strokeEnd" from:@0 to:@1 duration:0.9 delay:0.2];
+            CABasicAnimation *show = [self animate:@"opacity" from:@1 to:@1 duration:1.1 delay:0.2];
+            show.fillMode = kCAFillModeRemoved;
+            CABasicAnimation *burst = [self animate:@"transform.scale" from:@1 to:@1.9 duration:0.5 delay:1.1];
+            CABasicAnimation *fade = [self animate:@"opacity" from:@1 to:@0 duration:0.5 delay:1.1];
+            burst.fillMode = fade.fillMode = kCAFillModeRemoved;
+            [ring addAnimation:charge forKey:@"charge"];
+            [ring addAnimation:show forKey:@"show"];
+            [ring addAnimation:burst forKey:@"burst"];
+            [ring addAnimation:fade forKey:@"fade"];
+            logoDone = 1.2;
+        }
+    }
+
+    // Background glow, then the wordmark rising into place.
+    if (moving) [_glow addAnimation:[self animate:@"opacity" from:@0 to:@1 duration:0.7 delay:logoDone - 0.2] forKey:@"glow"];
+    _glow.opacity = 1;
+    if (moving) _word.transform = CGAffineTransformMakeTranslation(0, 14);
+    [UIView animateWithDuration:moving ? 0.5 : 0.2 delay:moving ? logoDone : 0 options:UIViewAnimationOptionCurveEaseOut animations:^{
+        self->_word.alpha = 1;
+        self->_word.transform = CGAffineTransformIdentity;
+    } completion:nil];
+
+    CFTimeInterval hold = moving ? logoDone + 1.35 : 1.4;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(hold * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [UIView animateWithDuration:0.5 animations:^{ self.alpha = 0; } completion:^(BOOL finished) {
+            if (completion) completion();
+        }];
+    });
+}
+
+@end
+
+// The chime is made in code (see VLTChime.h) and played as a system sound,
+// so it follows the mute switch and mixes with whatever else is playing.
+static void VLTPlayBootChime(void) {
+    static SystemSoundID sound;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        size_t length = 0;
+        uint8_t *bytes = vlt_chime_wav(&length);
+        if (!bytes) return;
+        NSString *path = [NSTemporaryDirectory() stringByAppendingPathComponent:@"volta-chime.wav"];
+        BOOL written = [[NSData dataWithBytesNoCopy:bytes length:length freeWhenDone:YES] writeToFile:path atomically:YES];
+        if (written) AudioServicesCreateSystemSoundID((__bridge CFURLRef)[NSURL fileURLWithPath:path], &sound);
+    });
+    if (sound) AudioServicesPlaySystemSound(sound);
+}
+
+static void VLTPlayBoot(void) {
+    static VLTBootView *view;
+    static BOOL playing;
+    static NSUInteger generation;
+    if (playing) return;
+    UIView *host = VLTPopupHost();
+    if (!view) view = [[VLTBootView alloc] initWithFrame:host.bounds];
+    view.frame = host.bounds;
+    [host addSubview:view];
+    playing = YES;
+    NSUInteger mine = ++generation;
+    VLTPopupBegin();
+    void (^finish)(void) = ^{
+        if (!playing || generation != mine) return;   // already finished by the other path
+        playing = NO;
+        [view removeFromSuperview];
+        VLTPopupEnd();
+        if (gCutout != 0 || gHomeBar) VLTLayoutCutout();
+    };
+    if (gBootSound) VLTPlayBootChime();
+    [view playWithCompletion:finish];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(6 * NSEC_PER_SEC)), dispatch_get_main_queue(), finish);   // safety net
+}
+
+// At startup the window may not be showable for a moment; wait for that, briefly.
+static void VLTPlayBootWhenReady(int attempt) {
+    BOOL ready = NO;
+    for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+        if ([scene isKindOfClass:[UIWindowScene class]]) { ready = YES; break; }
+    }
+    if (ready || attempt >= 15) {
+        VLTPlayBoot();
+        return;
+    }
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ VLTPlayBootWhenReady(attempt + 1); });
+}
+
 #pragma mark - Hooks and observers
 
 %group Popups
@@ -698,9 +959,11 @@ static void VLTPopupPrefsChanged(CFNotificationCenterRef center, void *observer,
 // Fired from Settings: "Preview" buttons.
 static void VLTPopupPreview(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef info) {
     BOOL charge = name && CFStringHasSuffix(name, CFSTR("/previewCharge"));
+    BOOL boot = name && CFStringHasSuffix(name, CFSTR("/previewBoot"));
     dispatch_async(dispatch_get_main_queue(), ^{
         VLTLoadPopupPrefs();
-        if (charge) VLTPlayCharge();
+        if (boot) VLTPlayBoot();
+        else if (charge) VLTPlayCharge();
         else VLTShowHUD(0, 0.6);
     });
 }
@@ -713,7 +976,18 @@ static void VLTPopupPreview(CFNotificationCenterRef center, void *observer, CFSt
         CFNotificationCenterAddObserver(darwin, NULL, VLTPopupPrefsChanged, CFSTR(VLT_NOTIFY_PREFS), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
         CFNotificationCenterAddObserver(darwin, NULL, VLTPopupPreview, CFSTR(VLT_DOMAIN "/previewCharge"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
         CFNotificationCenterAddObserver(darwin, NULL, VLTPopupPreview, CFSTR(VLT_DOMAIN "/previewHUD"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
+        CFNotificationCenterAddObserver(darwin, NULL, VLTPopupPreview, CFSTR(VLT_DOMAIN "/previewBoot"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
         %init(Popups);
+
+        // The startup animation: as soon as SpringBoard has finished launching.
+        if (gBootOn) {
+            __block id token = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidFinishLaunchingNotification object:nil
+                                                                                  queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification *note) {
+                if (token) [[NSNotificationCenter defaultCenter] removeObserver:token];
+                token = nil;
+                VLTPlayBootWhenReady(0);
+            }];
+        }
 
         // Plugged in: play the animation. Only on a real change from "not charging".
         dispatch_async(dispatch_get_main_queue(), ^{

@@ -318,6 +318,10 @@ static UIImage *VLTSampleIcon(NSString *symbol, UIColor *top, UIColor *bottom, C
     notify_post(VLT_DOMAIN "/previewCharge");
 }
 
+- (void)previewBoot:(PSSpecifier *)specifier {
+    notify_post(VLT_DOMAIN "/previewBoot");
+}
+
 @end
 
 @implementation VLTHomeController

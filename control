@@ -1,6 +1,6 @@
 Package: com.notpreston.volta
 Name: Volta
-Version: 2.3.0
+Version: 2.4.0
 Architecture: iphoneos-arm64
 Description: Restyle the battery, Control Center, dock and Lock Screen, add animated wallpapers, and get Phone and Calculator apps for iPad.
 Maintainer: notpreston

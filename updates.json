@@ -1,5 +1,5 @@
 {
-  "version": "2.3.0",
-  "notes": "New Saved app: a watch-later list for YouTube videos that needs no account, with a Save to Volta button in share sheets.",
-  "url": "https://github.com/NotPrestonOnTop/volta/raw/main/releases/com.notpreston.volta_2.3.0_iphoneos-arm64.deb"
+  "version": "2.4.0",
+  "notes": "New startup animation: a Volta animation plays over the Lock Screen after a restart or respring, with three styles, your own color and name, and an optional chime.",
+  "url": "https://github.com/NotPrestonOnTop/volta/raw/main/releases/com.notpreston.volta_2.4.0_iphoneos-arm64.deb"
 }

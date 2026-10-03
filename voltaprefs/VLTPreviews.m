@@ -121,7 +121,7 @@ static const VLTPageLook kPageLooks[] = {
     { VLTPageAbout,     "About & Updates",   "heart.fill",              0xFF6482, 0xFF2D55 },
     { VLTPageSwitcher,  "App Switcher",      "rectangle.stack.fill",    0x7D7AFF, 0x4B4BD8 },
     { VLTPageKeyboard,  "Keyboard",          "keyboard.fill",           0x8E8E93, 0x5C5C63 },
-    { VLTPagePopups,    "Volume & Charging", "speaker.wave.2.fill",     0x30D158, 0x0FA36B },
+    { VLTPagePopups,    "Volume, Charging & Startup", "speaker.wave.2.fill", 0x30D158, 0x0FA36B },
 };
 
 static const VLTPageLook *VLTLookFor(VLTPage page) {

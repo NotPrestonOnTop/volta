@@ -209,9 +209,12 @@ static NSString *VLTPageStatusText(VLTPage page, NSDictionary *p, BOOL *inUse) {
         case VLTPageSwitcher: used = on && VLTBool(p, @"swOn", NO);     text = @"On"; break;
         case VLTPageKeyboard: used = on && VLTBool(p, @"kbOn", NO);     text = @"On"; break;
         case VLTPagePopups: {
-            BOOL hud = VLTBool(p, @"hudOn", NO), charge = VLTBool(p, @"chargeOn", NO);
-            text = (hud && charge) ? @"Volume and charging" : (hud ? @"Volume indicator" : @"Charging animation");
-            used = on && (hud || charge);
+            NSMutableArray *parts = [NSMutableArray array];
+            if (VLTBool(p, @"hudOn", NO)) [parts addObject:@"Volume"];
+            if (VLTBool(p, @"chargeOn", NO)) [parts addObject:@"Charging"];
+            if (VLTBool(p, @"bootOn", NO)) [parts addObject:@"Startup"];
+            text = [parts componentsJoinedByString:@", "];
+            used = on && parts.count > 0;
             break;
         }
         case VLTPageIcons: {

@@ -34,9 +34,10 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 **Keyboard** (in every app)
 - Always dark or always light keys, a color wash behind the keys, or a rainbow that cycles
 
-**Volume & Charging**
+**Volume, Charging & Startup**
 - A custom volume indicator (pill, slim bar or side bar) in your color, optionally for brightness too
 - A full-screen charging animation when you plug in: ring, battery filling up, or lightning bolt
+- A startup animation that plays over the Lock Screen after a restart or respring: Bolt Strike, Power Ring or Name Only, in your color, with your own name and an optional chime
 
 **Notifications**
 - Tint color and strength, corner radius, border, remove the blur
@@ -101,7 +102,7 @@ Everything is visual only. The real battery level and system behaviour are untou
 
 ## Install
 
-Download [`com.notpreston.volta_2.3.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.3.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
+Download [`com.notpreston.volta_2.4.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.4.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
 For rootless jailbreaks (Dopamine, palera1n rootless) on iOS 15 – 17.
 Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader.
 
@@ -123,6 +124,7 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     Share.x              hooks: the Save to Volta share-sheet button (all apps)
     VLTIconTheme.h       icon shapes and tints; shared with the Settings preview
     VLTLook.h            small helpers shared by the look-and-feel hooks
+    VLTChime.h           makes the startup chime in code; testable on its own
     Home.x               hooks: dock and animated wallpaper (SpringBoard only, separate library)
     Lock.x               hooks: Lock Screen unlock gestures (SpringBoard only)
     VLTSlider.m          the slide-to-unlock and swipe-up controls; shared with the Settings preview
@@ -175,7 +177,7 @@ This repository hosts one; paste this link into About > Update link:
 For a new version: add the new .deb to `releases/`, then change `version`, `notes` and `url` in
 [`updates.json`](updates.json). The file looks like this:
 
-    { "version": "2.3.0", "notes": "What changed", "url": "https://where-to-download" }
+    { "version": "2.4.0", "notes": "What changed", "url": "https://where-to-download" }
 
 Volta checks it once a day and compares `version` with its own. When you release a new
 build, bump `Version` in `control` and `VLT_VERSION` in `VLTShared.h`, then update the file.
