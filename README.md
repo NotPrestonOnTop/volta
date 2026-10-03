@@ -39,6 +39,9 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 - A full-screen charging animation when you plug in: ring, battery filling up, or lightning bolt
 - A startup animation that plays over the Lock Screen after a restart or respring: Bolt Strike, Power Ring or Name Only, in your color, with your own name and an optional chime
 
+**Sounds**
+- Volta's own sounds when the iPad locks, unlocks, is plugged in or unplugged, and an optional tick for volume presses; three packs (Chime, Arcade, Sci-Fi) made in code, with a loudness slider
+
 **Notifications**
 - Tint color and strength, corner radius, border, remove the blur
 
@@ -58,6 +61,7 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 - Compass: a working compass with a bubble level
 - Voice Memos: record, play back, rename, share and delete recordings
 - Wallet: a card and pass holder for looks, with QR passes. It cannot pay, and never asks for a full card number
+- Drive: a car dashboard for a dash-mounted iPad, in Volta's own design: map with speed, music controls, big app tiles, clock and weather, and it keeps the screen awake
 - Saved: a watch-later list for YouTube videos that needs no account. It keeps links (with title and thumbnail), not the videos; Volta adds a Save to Volta button to share sheets whenever a YouTube link is shared
 - **Voltweaks**: a tweak manager. Lists every tweak the jailbreak loads, with the package it came from, its version and author, and what it loads into; switch any tweak off or on (takes effect after a respring, nothing is deleted), turn everything off at once to hunt down a misbehaving tweak, search, and respring from the app
 - Each app has an on/off switch on the main Volta page
@@ -102,7 +106,7 @@ Everything is visual only. The real battery level and system behaviour are untou
 
 ## Install
 
-Download [`com.notpreston.volta_2.4.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.4.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
+Download [`com.notpreston.volta_2.5.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.5.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
 For rootless jailbreaks (Dopamine, palera1n rootless) on iOS 15 – 17.
 Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader.
 
@@ -120,6 +124,7 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     Notify.x             hooks: notification styling (SpringBoard only)
     Switcher.x           hooks: App Switcher cards (SpringBoard only)
     Popups.x             the volume / brightness indicator, the charging animation, and the fake notch / Dynamic Island / home bar (SpringBoard only)
+    Sounds.x             system sounds (SpringBoard only); VLTSynth.h makes them and is tested on its own
     Keyboard.x           hooks: keyboard appearance and color (all apps)
     Share.x              hooks: the Save to Volta share-sheet button (all apps)
     VLTIconTheme.h       icon shapes and tints; shared with the Settings preview
@@ -141,6 +146,7 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     voltacompass/        the Compass app
     voltamemos/          the Voice Memos app
     voltawallet/         the Wallet app
+    voltadrive/          the Drive app (car dashboard)
     voltasaved/          the Saved app; SavedCore.h finds the video id in a link and is tested on its own
     voltweaks/           the Voltweaks app (tweak manager)
     voltweakshelper/     the small set-uid tool Voltweaks uses to rename a tweak's file; it only ever renames
@@ -177,7 +183,7 @@ This repository hosts one; paste this link into About > Update link:
 For a new version: add the new .deb to `releases/`, then change `version`, `notes` and `url` in
 [`updates.json`](updates.json). The file looks like this:
 
-    { "version": "2.4.0", "notes": "What changed", "url": "https://where-to-download" }
+    { "version": "2.5.0", "notes": "What changed", "url": "https://where-to-download" }
 
 Volta checks it once a day and compares `version` with its own. When you release a new
 build, bump `Version` in `control` and `VLT_VERSION` in `VLTShared.h`, then update the file.

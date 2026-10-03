@@ -5,7 +5,7 @@ if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
         uicache -u /var/jb/Applications/VoltaPhone.app 2>/dev/null
         uicache -u /var/jb/Applications/VoltaCalc.app 2>/dev/null
         uicache -u /var/jb/Applications/Voltweaks.app 2>/dev/null
-        for APP in VoltaWeather VoltaCompass VoltaMemos VoltaWallet VoltaSaved; do
+        for APP in VoltaWeather VoltaCompass VoltaMemos VoltaWallet VoltaSaved VoltaDrive; do
             uicache -u "/var/jb/Applications/$APP.app" 2>/dev/null
         done
     fi

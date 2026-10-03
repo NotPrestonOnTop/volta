@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Volta plays its own sounds for a few moments in the day. They follow the mute switch and play over whatever else is on.</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>sndOn</string>
+			<key>label</key>
+			<string>Volta Sounds</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Chime is soft bells, Arcade is old game blips, Sci-Fi is sweeps. Every sound is made by Volta itself.</string>
+			<key>label</key>
+			<string>Sound Pack</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSLinkListCell</string>
+			<key>default</key>
+			<integer>0</integer>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>detail</key>
+			<string>PSListItemsController</string>
+			<key>key</key>
+			<string>sndPack</string>
+			<key>label</key>
+			<string>Pack</string>
+			<key>validTitles</key>
+			<array>
+				<string>Chime</string>
+				<string>Arcade</string>
+				<string>Sci-Fi</string>
+			</array>
+			<key>validValues</key>
+			<array>
+				<integer>0</integer>
+				<integer>1</integer>
+				<integer>2</integer>
+			</array>
+		</dict>
+		<dict>
+			<key>action</key>
+			<string>previewSounds:</string>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Play Every Sound</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Loudness</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>default</key>
+			<integer>70</integer>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>isSegmented</key>
+			<true/>
+			<key>key</key>
+			<string>sndLoudness</string>
+			<key>max</key>
+			<integer>100</integer>
+			<key>min</key>
+			<integer>10</integer>
+			<key>segmentCount</key>
+			<integer>9</integer>
+			<key>showValue</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>The iPad has lock and charging sounds of its own; you can turn those off in Settings &gt; Sounds if you only want Volta's.</string>
+			<key>label</key>
+			<string>Play a Sound When</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>sndLock</string>
+			<key>label</key>
+			<string>The iPad Locks</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>sndUnlock</string>
+			<key>label</key>
+			<string>The iPad Unlocks</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>sndPlug</string>
+			<key>label</key>
+			<string>It Is Plugged In</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>sndUnplug</string>
+			<key>label</key>
+			<string>It Is Unplugged</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>sndTick</string>
+			<key>label</key>
+			<string>A Volume Button Is Pressed</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>Sounds</string>
+</dict>
+</plist>

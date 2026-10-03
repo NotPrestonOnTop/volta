@@ -17,7 +17,7 @@ if command -v uicache >/dev/null 2>&1; then
     uicache -p /var/jb/Applications/VoltaPhone.app 2>/dev/null
     uicache -p /var/jb/Applications/VoltaCalc.app 2>/dev/null
     uicache -p /var/jb/Applications/Voltweaks.app 2>/dev/null
-    for APP in VoltaWeather VoltaCompass VoltaMemos VoltaWallet VoltaSaved; do
+    for APP in VoltaWeather VoltaCompass VoltaMemos VoltaWallet VoltaSaved VoltaDrive; do
         uicache -p "/var/jb/Applications/$APP.app" 2>/dev/null
     done
 fi

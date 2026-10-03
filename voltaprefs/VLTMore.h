@@ -23,6 +23,9 @@
 @interface VLTPopupsController : VLTBaseController
 @end
 
+@interface VLTSoundsController : VLTBaseController
+@end
+
 // Saved setups: not a settings list, a plain table.
 @interface VLTProfilesController : UITableViewController <UIDocumentPickerDelegate>
 @end

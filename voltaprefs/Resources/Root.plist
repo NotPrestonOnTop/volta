@@ -145,6 +145,20 @@
 			<string>Saved</string>
 		</dict>
 		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>appDrive</string>
+			<key>label</key>
+			<string>Drive</string>
+		</dict>
+		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
@@ -194,7 +208,7 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>Volta 2.4.0  ·  iOS 15 – 17  ·  rootless</string>
+			<string>Volta 2.5.0  ·  iOS 15 – 17  ·  rootless</string>
 		</dict>
 	</array>
 	<key>title</key>

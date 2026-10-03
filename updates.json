@@ -1,5 +1,5 @@
 {
-  "version": "2.4.0",
-  "notes": "New startup animation: a Volta animation plays over the Lock Screen after a restart or respring, with three styles, your own color and name, and an optional chime.",
-  "url": "https://github.com/NotPrestonOnTop/volta/raw/main/releases/com.notpreston.volta_2.4.0_iphoneos-arm64.deb"
+  "version": "2.5.0",
+  "notes": "New Drive app (a car dashboard with map, speed, music controls and big app tiles) and Volta Sounds: lock, unlock, plug-in and volume sounds in three packs.",
+  "url": "https://github.com/NotPrestonOnTop/volta/raw/main/releases/com.notpreston.volta_2.5.0_iphoneos-arm64.deb"
 }

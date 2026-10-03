@@ -324,6 +324,17 @@ static UIImage *VLTSampleIcon(NSString *symbol, UIColor *top, UIColor *bottom, C
 
 @end
 
+@implementation VLTSoundsController
+
+- (NSString *)plistName { return @"Sounds"; }
+
+// SpringBoard plays them, so this is exactly what you will hear.
+- (void)previewSounds:(PSSpecifier *)specifier {
+    notify_post(VLT_DOMAIN "/previewSounds");
+}
+
+@end
+
 @implementation VLTHomeController
 
 - (NSString *)plistName { return @"Home"; }

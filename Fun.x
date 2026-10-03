@@ -43,7 +43,7 @@ static CGFloat gBounce = 0.55, gPull = 1.4;
 // Elsewhere
 static BOOL gConfetti, gFortune, gWobbleCC, gDizzyClock;
 static NSInteger gNames;        // 0 off, 1 backwards, 2 sPoNgE, 3 everything is Bob (read once, at launch)
-static BOOL gAppPhone = YES, gAppCalc = YES, gAppTweaks = YES, gAppWeather = YES, gAppCompass = YES, gAppMemos = YES, gAppWallet = YES, gAppSaved = YES;
+static BOOL gAppPhone = YES, gAppCalc = YES, gAppTweaks = YES, gAppWeather = YES, gAppCompass = YES, gAppMemos = YES, gAppWallet = YES, gAppSaved = YES, gAppDrive = YES;
 static BOOL gLocked;            // screen is locked: the busy effects take a break
 static BOOL gExplodeArmed;      // set from Settings; goes off on the next Home Screen touch
 
@@ -77,6 +77,7 @@ static void VLTLoadFunPrefs(void) {
     gAppMemos = VLTBool(p, @"appMemos", YES);
     gAppWallet = VLTBool(p, @"appWallet", YES);
     gAppSaved = VLTBool(p, @"appSaved", YES);
+    gAppDrive = VLTBool(p, @"appDrive", YES);
 }
 
 static inline BOOL VLTCalm(void) { return UIAccessibilityIsReduceMotionEnabled(); }
@@ -1121,7 +1122,8 @@ static void VLTSyncApps(void) {
                       @[@"com.notpreston.volta.compass", @"/var/jb/Applications/VoltaCompass.app", @(gAppCompass)],
                       @[@"com.notpreston.volta.memos", @"/var/jb/Applications/VoltaMemos.app", @(gAppMemos)],
                       @[@"com.notpreston.volta.wallet", @"/var/jb/Applications/VoltaWallet.app", @(gAppWallet)],
-                      @[@"com.notpreston.volta.saved", @"/var/jb/Applications/VoltaSaved.app", @(gAppSaved)]];
+                      @[@"com.notpreston.volta.saved", @"/var/jb/Applications/VoltaSaved.app", @(gAppSaved)],
+                      @[@"com.notpreston.volta.drive", @"/var/jb/Applications/VoltaDrive.app", @(gAppDrive)]];
     for (NSArray *app in apps) {
         NSString *bundleID = app[0], *path = app[1];
         BOOL wanted = [app[2] boolValue];

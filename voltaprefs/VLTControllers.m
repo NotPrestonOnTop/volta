@@ -169,7 +169,7 @@ static NSArray<NSNumber *> *VLTGroupPages(NSInteger group) {
         case VLTGroupLock:   return @[@(VLTPageLock), @(VLTPageNotif), @(VLTPagePopups)];
         case VLTGroupCC:     return @[@(VLTPageCC)];
         case VLTGroupFun:    return @[@(VLTPageFun)];
-        case VLTGroupMore:   return @[@(VLTPageKeyboard), @(VLTPageProfiles), @(VLTPageAbout)];
+        case VLTGroupMore:   return @[@(VLTPageKeyboard), @(VLTPageSounds), @(VLTPageProfiles), @(VLTPageAbout)];
         default:             return @[];
     }
 }
@@ -208,6 +208,13 @@ static NSString *VLTPageStatusText(VLTPage page, NSDictionary *p, BOOL *inUse) {
         case VLTPageNotif: used = on && VLTBool(p, @"notifOn", NO);     text = @"On"; break;
         case VLTPageSwitcher: used = on && VLTBool(p, @"swOn", NO);     text = @"On"; break;
         case VLTPageKeyboard: used = on && VLTBool(p, @"kbOn", NO);     text = @"On"; break;
+        case VLTPageSounds: {
+            NSArray *packs = @[@"Chime", @"Arcade", @"Sci-Fi"];
+            NSInteger pack = (NSInteger)VLTNum(p, @"sndPack", 0);
+            text = packs[(pack >= 0 && pack < (NSInteger)packs.count) ? pack : 0];
+            used = on && VLTBool(p, @"sndOn", NO);
+            break;
+        }
         case VLTPagePopups: {
             NSMutableArray *parts = [NSMutableArray array];
             if (VLTBool(p, @"hudOn", NO)) [parts addObject:@"Volume"];
@@ -382,7 +389,7 @@ static NSString *VLTGroupStatusText(NSInteger group, NSDictionary *p) {
         @(VLTPageWallpaper): [VLTWallpaperController class], @(VLTPageLock): [VLTLockController class],
         @(VLTPageNotif): [VLTNotifController class], @(VLTPageFun): [VLTFunController class],
         @(VLTPageSwitcher): [VLTSwitcherController class], @(VLTPageKeyboard): [VLTKeyboardController class],
-        @(VLTPagePopups): [VLTPopupsController class],
+        @(VLTPagePopups): [VLTPopupsController class], @(VLTPageSounds): [VLTSoundsController class],
     };
     Class pageClass = pages[@(index)];
     if (!pageClass) return;
