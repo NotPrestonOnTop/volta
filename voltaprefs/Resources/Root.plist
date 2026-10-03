@@ -131,6 +131,40 @@
 			<string>Wallet</string>
 		</dict>
 		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>appSaved</string>
+			<key>label</key>
+			<string>Saved</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Adds Save to Volta to share sheets whenever a YouTube link is being shared. It puts the video in the Saved app, a watch-later list that needs no account. An app that is already open picks this up the next time it is launched.</string>
+		</dict>
+		<dict>
+			<key>PostNotification</key>
+			<string>com.notpreston.volta/prefs</string>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.notpreston.volta</string>
+			<key>key</key>
+			<string>shareSave</string>
+			<key>label</key>
+			<string>Save to Volta in Share Sheets</string>
+		</dict>
+		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
@@ -160,7 +194,7 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>Volta 2.2.1  ·  iOS 15 – 17  ·  rootless</string>
+			<string>Volta 2.3.0  ·  iOS 15 – 17  ·  rootless</string>
 		</dict>
 	</array>
 	<key>title</key>

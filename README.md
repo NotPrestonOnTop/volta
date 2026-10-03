@@ -57,6 +57,7 @@ Rootless tweak for iOS 15 – 17 (Dopamine, palera1n rootless). Adds a **Volta**
 - Compass: a working compass with a bubble level
 - Voice Memos: record, play back, rename, share and delete recordings
 - Wallet: a card and pass holder for looks, with QR passes. It cannot pay, and never asks for a full card number
+- Saved: a watch-later list for YouTube videos that needs no account. It keeps links (with title and thumbnail), not the videos; Volta adds a Save to Volta button to share sheets whenever a YouTube link is shared
 - **Voltweaks**: a tweak manager. Lists every tweak the jailbreak loads, with the package it came from, its version and author, and what it loads into; switch any tweak off or on (takes effect after a respring, nothing is deleted), turn everything off at once to hunt down a misbehaving tweak, search, and respring from the app
 - Each app has an on/off switch on the main Volta page
 
@@ -100,7 +101,7 @@ Everything is visual only. The real battery level and system behaviour are untou
 
 ## Install
 
-Download [`com.notpreston.volta_2.2.1_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.2.1_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
+Download [`com.notpreston.volta_2.3.0_iphoneos-arm64.deb`](releases/com.notpreston.volta_2.3.0_iphoneos-arm64.deb) from the `releases` folder, open it with Sileo, Zebra or Filza, then respring.
 For rootless jailbreaks (Dopamine, palera1n rootless) on iOS 15 – 17.
 Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader.
 
@@ -119,6 +120,7 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     Switcher.x           hooks: App Switcher cards (SpringBoard only)
     Popups.x             the volume / brightness indicator, the charging animation, and the fake notch / Dynamic Island / home bar (SpringBoard only)
     Keyboard.x           hooks: keyboard appearance and color (all apps)
+    Share.x              hooks: the Save to Volta share-sheet button (all apps)
     VLTIconTheme.h       icon shapes and tints; shared with the Settings preview
     VLTLook.h            small helpers shared by the look-and-feel hooks
     Home.x               hooks: dock and animated wallpaper (SpringBoard only, separate library)
@@ -137,6 +139,7 @@ Requires ElleKit (or another Substrate-compatible injector) and PreferenceLoader
     voltacompass/        the Compass app
     voltamemos/          the Voice Memos app
     voltawallet/         the Wallet app
+    voltasaved/          the Saved app; SavedCore.h finds the video id in a link and is tested on its own
     voltweaks/           the Voltweaks app (tweak manager)
     voltweakshelper/     the small set-uid tool Voltweaks uses to rename a tweak's file; it only ever renames
                          <Name>.dylib <-> <Name>.disabled inside the tweak folder
@@ -172,7 +175,7 @@ This repository hosts one; paste this link into About > Update link:
 For a new version: add the new .deb to `releases/`, then change `version`, `notes` and `url` in
 [`updates.json`](updates.json). The file looks like this:
 
-    { "version": "2.2.1", "notes": "What changed", "url": "https://where-to-download" }
+    { "version": "2.3.0", "notes": "What changed", "url": "https://where-to-download" }
 
 Volta checks it once a day and compares `version` with its own. When you release a new
 build, bump `Version` in `control` and `VLT_VERSION` in `VLTShared.h`, then update the file.

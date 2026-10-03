@@ -18,7 +18,7 @@
 #define VLT_NOTIFY_PREFS    VLT_DOMAIN "/prefs"     // Settings -> SpringBoard: prefs changed
 #define VLT_NOTIFY_APPLY    VLT_DOMAIN "/apply"     // SpringBoard -> everyone: state republished
 #define VLT_NOTIFY_RESPRING VLT_DOMAIN "/respring"  // Settings -> SpringBoard
-#define VLT_VERSION         "2.2.1"   // keep in step with the "control" file
+#define VLT_VERSION         "2.3.0"   // keep in step with the "control" file
 #define VLT_STATE_VERSION   3
 
 // Custom battery picture. SpringBoard writes it here so that apps, which can
@@ -499,7 +499,8 @@ static inline NSArray<NSString *> *VLTStatusKeys(void) {
              @"sbHideAlarm", @"sbHideAirplane", @"sbHideVPN", @"sbHideBluetooth",
              @"fakeCutout", @"fakeWidth", @"fakeHeight", @"fakeTop", @"fakeCharge", @"fakeLens", @"fakeHomeBar",
              @"sigOn", @"sigBars", @"sigType", @"sigCarrier",
-             @"kbOn", @"kbMode", @"kbTint", @"kbTintStrength", @"kbRainbow"];
+             @"kbOn", @"kbMode", @"kbTint", @"kbTintStrength", @"kbRainbow",
+             @"shareSave", @"appSaved"];
 }
 
 static inline NSDictionary *VLTStatusDict(NSDictionary *prefs) {

@@ -11,7 +11,7 @@ include $(THEOS)/makefiles/common.mk
 # VoltaHome -> SpringBoard only: Home Screen, icons, dock, wallpapers, Lock Screen, notifications, fun
 TWEAK_NAME = Volta VoltaHome
 
-Volta_FILES = Tweak.x Status.x Keyboard.x
+Volta_FILES = Tweak.x Status.x Keyboard.x Share.x
 Volta_CFLAGS = -fobjc-arc
 Volta_FRAMEWORKS = UIKit QuartzCore
 
@@ -20,7 +20,7 @@ VoltaHome_CFLAGS = -fobjc-arc
 VoltaHome_FRAMEWORKS = UIKit QuartzCore AVFoundation CoreMedia CoreMotion AudioToolbox
 
 # The Settings pane, the apps (Phone, Calculator, Voltweaks) and Voltweaks's root helper
-SUBPROJECTS += voltaprefs voltaphone voltacalc voltaweather voltacompass voltamemos voltawallet voltweaks voltweakshelper
+SUBPROJECTS += voltaprefs voltaphone voltacalc voltaweather voltacompass voltamemos voltawallet voltasaved voltweaks voltweakshelper
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 include $(THEOS_MAKE_PATH)/aggregate.mk
